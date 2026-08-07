@@ -99,6 +99,9 @@ jobs:
 
       - name: Build signed APK
         if: steps.guard.outputs.exists == 'true' && steps.signing.outputs.signed == 'true'
+        env:
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: >
           dotnet publish ${{ env.PROJECT }}
           -c Release -f net10.0-android
@@ -108,8 +111,8 @@ jobs:
           -p:AndroidKeyStore=true
           -p:AndroidSigningKeyStore="${{ steps.keystore.outputs.path }}"
           -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          -p:AndroidSigningKeyPass="${{ secrets.ANDROID_KEY_PASSWORD }}"
-          -p:AndroidSigningStorePass="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+          -p:AndroidSigningKeyPass=env:ANDROID_KEY_PASSWORD
+          -p:AndroidSigningStorePass=env:ANDROID_KEYSTORE_PASSWORD
           -o publish
 
       - name: Build unsigned APK

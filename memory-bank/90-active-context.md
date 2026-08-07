@@ -40,7 +40,7 @@ place and verified.
 | --- | --- |
 | **Android on real hardware** | Verified on an Android 36 emulator, not on a physical phone. The all-files permission flow in particular behaves differently per vendor. |
 | **Journal compaction** | Journals only grow. Irrelevant for years at a few readings a day, but see [ADR-0002](decisions/ADR-0002-journal-storage.md). |
-| **Android signing secrets** | Not configured. Until they are, the workflow builds an unsigned APK and skips publishing. |
+| **Android release** | Signing secrets are configured. Rotate the signing password exposed by the failed command, update both password secrets, then rerun the release workflow. |
 | **First release tags** | None yet, so the first release of each app will be `0.1.0`. |
 | **Phone chart on a device** | Builds and is unit tested, but the touch bands and drag feel have not been tried on real hardware. |
 | **Phone chart zoom** | The horizontal scale is fixed at `ChartRequest.DefaultPixelsPerHour`. Pinch-zoom is not implemented. |
