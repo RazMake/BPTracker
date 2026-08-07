@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="BPTracker.Mobile.SettingsPage"
+             Title="Storage"
+             BackgroundColor="{AppThemeBinding Light=#F4F6F8, Dark=#12181F}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+
+            <Label Text="DATA FOLDER" FontSize="13" CharacterSpacing="2" TextColor="#6B7A88" />
+            <Label Text="{Binding DataFolder}" FontSize="15" LineBreakMode="CharacterWrap" />
+
+            <Label Text="THIS DEVICE WRITES" FontSize="13" CharacterSpacing="2"
+                   TextColor="#6B7A88" Margin="0,12,0,0" />
+            <Label Text="{Binding DeviceJournalPath}" FontSize="15" LineBreakMode="CharacterWrap" />
+
+            <Label FontSize="14" TextColor="#6B7A88" Margin="0,12,0,0"
+                   Text="Point your sync app at the data folder. Each device only ever writes its own file, so there is nothing to merge and nothing to conflict." />
+
+            <Button Text="Change folder..." Clicked="OnChangeFolder" Margin="0,12,0,0" />
+            <Button Text="Copy path" Clicked="OnCopyPath" />
+            <Button x:Name="GrantAccessButton"
+                    Text="Allow access to all files"
+                    Clicked="OnGrantAccess"
+                    IsVisible="False" />
+
+            <Label Text="{Binding StatusMessage}" TextColor="#D64545" FontSize="14" />
+
+            <Label Text="DEVICE ID" FontSize="13" CharacterSpacing="2"
+                   TextColor="#6B7A88" Margin="0,20,0,0" />
+            <Label Text="{Binding DeviceId}" FontSize="15" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

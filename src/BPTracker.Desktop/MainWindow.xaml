@@ -1,0 +1,184 @@
+<Window x:Class="BPTracker.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+        xmlns:trends="clr-namespace:BPTracker.Presentation.Trends;assembly=BPTracker.Presentation"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        Title="BPTracker"
+        Height="760"
+        Width="1180"
+        MinHeight="600"
+        MinWidth="920"
+        Background="{StaticResource SurfaceAlt}"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="340" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Style="{StaticResource Card}" Margin="0,0,16,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <TextBlock Text="New reading" Style="{StaticResource Heading}" />
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                        <TextBlock Text="SYSTOLIC" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                        <TextBox Style="{StaticResource PressureBox}"
+                                 Text="{Binding Entry.Systolic, UpdateSourceTrigger=PropertyChanged}" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
+                            <Button Content="-" Style="{StaticResource StepButton}"
+                                    Command="{Binding Entry.AdjustSystolicCommand}">
+                                <Button.CommandParameter>
+                                    <sys:Int32>-1</sys:Int32>
+                                </Button.CommandParameter>
+                            </Button>
+                            <Button Content="+" Style="{StaticResource StepButton}"
+                                    Command="{Binding Entry.AdjustSystolicCommand}">
+                                <Button.CommandParameter>
+                                    <sys:Int32>1</sys:Int32>
+                                </Button.CommandParameter>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                        <TextBlock Text="DIASTOLIC" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
+                        <TextBox Style="{StaticResource PressureBox}"
+                                 Text="{Binding Entry.Diastolic, UpdateSourceTrigger=PropertyChanged}" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
+                            <Button Content="-" Style="{StaticResource StepButton}"
+                                    Command="{Binding Entry.AdjustDiastolicCommand}">
+                                <Button.CommandParameter>
+                                    <sys:Int32>-1</sys:Int32>
+                                </Button.CommandParameter>
+                            </Button>
+                            <Button Content="+" Style="{StaticResource StepButton}"
+                                    Command="{Binding Entry.AdjustDiastolicCommand}">
+                                <Button.CommandParameter>
+                                    <sys:Int32>1</sys:Int32>
+                                </Button.CommandParameter>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Margin="0,16,0,0"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           Foreground="{StaticResource Accent}"
+                           Text="{Binding Entry.PreviewCategory}" />
+
+                <TextBlock Text="{Binding Entry.Validation.Message}"
+                           Foreground="{StaticResource CategoryStage2}"
+                           TextWrapping="Wrap"
+                           Margin="0,6,0,0"
+                           HorizontalAlignment="Center" />
+
+                <TextBlock Text="Note" Style="{StaticResource Caption}" Margin="0,16,0,4" />
+                <TextBox Text="{Binding Entry.Note, UpdateSourceTrigger=PropertyChanged}"
+                         MinHeight="52"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True" />
+
+                <Button Content="Save reading"
+                        Style="{StaticResource PrimaryButton}"
+                        Margin="0,16,0,0"
+                        Command="{Binding Entry.SaveCommand}" />
+
+                <TextBlock Text="{Binding Entry.StatusMessage}"
+                           Style="{StaticResource Caption}"
+                           HorizontalAlignment="Center"
+                           Margin="0,8,0,0" />
+
+                <Separator Margin="0,20" />
+
+                <TextBlock Text="DATA FOLDER" Style="{StaticResource Caption}" />
+                <TextBox Text="{Binding Storage.DataFolder, Mode=OneWay}"
+                         IsReadOnly="True"
+                         TextWrapping="Wrap"
+                         Margin="0,4,0,0"
+                         Background="{StaticResource SurfaceAlt}"
+                         ToolTip="{Binding Storage.DeviceJournalPath}" />
+                <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0" TextWrapping="Wrap"
+                           Text="{Binding Storage.DeviceJournalPath, StringFormat=This device writes: {0}}" />
+                <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0" TextWrapping="Wrap"
+                           Text="Point your sync tool at this folder. Each device writes its own file." />
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <Button Content="Change..." Padding="8,6" Margin="0,0,8,0" Click="OnChangeDataFolder" />
+                    <Button Content="Open folder" Padding="8,6" Click="OnOpenDataFolder" />
+                </StackPanel>
+                <TextBlock Text="{Binding Storage.StatusMessage}"
+                           Foreground="{StaticResource CategoryStage2}"
+                           TextWrapping="Wrap"
+                           Margin="0,6,0,0" />
+
+                <Separator Margin="0,20" />
+
+                <TextBlock x:Name="UpdateStatusText" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                <Button Content="Check for updates" Margin="0,8,0,0" Padding="8,6" Click="OnCheckForUpdates" />
+            </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="240" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,16">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Period" VerticalAlignment="Center" Style="{StaticResource Caption}" />
+                    <ComboBox Margin="12,0,24,0"
+                              Width="140"
+                              ItemsSource="{x:Static trends:TrendViewModel.AvailablePeriods}"
+                              SelectedItem="{Binding Trend.Period}" />
+
+                    <TextBlock Text="Average" VerticalAlignment="Center" Style="{StaticResource Caption}" />
+                    <TextBlock Margin="8,0,4,0" VerticalAlignment="Center" FontWeight="SemiBold"
+                               Text="{Binding Trend.Summary.AverageSystolic, StringFormat=F0}" />
+                    <TextBlock Text="/" VerticalAlignment="Center" />
+                    <TextBlock Margin="4,0,24,0" VerticalAlignment="Center" FontWeight="SemiBold"
+                               Text="{Binding Trend.Summary.AverageDiastolic, StringFormat=F0}" />
+
+                    <TextBlock Text="Readings" VerticalAlignment="Center" Style="{StaticResource Caption}" />
+                    <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold"
+                               Text="{Binding Trend.Summary.ReadingCount}" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,16">
+                <lvc:CartesianChart x:Name="TrendChart" />
+            </Border>
+
+            <Border Grid.Row="2" Style="{StaticResource Card}">
+                <DataGrid ItemsSource="{Binding History.Readings}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal"
+                          BorderThickness="0"
+                          RowHeight="30">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="When" Width="180"
+                                            Binding="{Binding MeasuredAt, StringFormat=g}" />
+                        <DataGridTextColumn Header="Systolic" Width="90" Binding="{Binding Systolic.MmHg}" />
+                        <DataGridTextColumn Header="Diastolic" Width="90" Binding="{Binding Diastolic.MmHg}" />
+                        <DataGridTextColumn Header="Category" Width="180" Binding="{Binding Category}" />
+                        <DataGridTextColumn Header="Note" Width="*" Binding="{Binding Context.Note}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

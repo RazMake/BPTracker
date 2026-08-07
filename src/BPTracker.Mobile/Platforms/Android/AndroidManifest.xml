@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true"></application>
+
+	<!--
+	    The journal folder has to sit where the user can see it and where a sync app can watch it,
+	    which on Android 11+ means all-files access. Requested at runtime, and the app still works
+	    on app-private storage if the user declines.
+	-->
+	<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+
+	<!-- Haptic confirmation when a reading is saved. Normal permission, granted at install. -->
+	<uses-permission android:name="android.permission.VIBRATE" />
+</manifest>

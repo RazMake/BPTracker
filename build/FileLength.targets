@@ -1,0 +1,90 @@
+<Project>
+
+  <PropertyGroup>
+    <EnableFileLengthCheck Condition="'$(EnableFileLengthCheck)' == ''">true</EnableFileLengthCheck>
+    <FileLengthWarnThreshold Condition="'$(FileLengthWarnThreshold)' == ''">300</FileLengthWarnThreshold>
+    <FileLengthErrorThreshold Condition="'$(FileLengthErrorThreshold)' == ''">400</FileLengthErrorThreshold>
+  </PropertyGroup>
+
+  <UsingTask TaskName="CheckFileLengths"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <WarnThreshold ParameterType="System.Int32" Required="true" />
+      <ErrorThreshold ParameterType="System.Int32" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+        var seen = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var objSegment = Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar;
+        var binSegment = Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar;
+
+        foreach (var item in Files)
+        {
+            var path = item.GetMetadata("FullPath");
+            if (string.IsNullOrEmpty(path) || !seen.Add(path) || !File.Exists(path))
+            {
+                continue;
+            }
+
+            // Generated sources are not authored by a human and must not fail the gate.
+            if (path.IndexOf(objSegment, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                path.IndexOf(binSegment, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                continue;
+            }
+
+            var name = Path.GetFileName(path);
+            if (name.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) ||
+                name.EndsWith(".g.i.cs", StringComparison.OrdinalIgnoreCase) ||
+                name.EndsWith(".Designer.cs", StringComparison.OrdinalIgnoreCase) ||
+                name.EndsWith("AssemblyInfo.cs", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var lineCount = 0;
+            using (var reader = new StreamReader(path))
+            {
+                while (reader.ReadLine() != null)
+                {
+                    lineCount++;
+                }
+            }
+
+            if (lineCount > ErrorThreshold)
+            {
+                Log.LogError(null, "BP0001", null, path, 1, 1, 0, 0,
+                    string.Format("File has {0} lines, exceeding the hard limit of {1}. Split it into smaller single-responsibility types.", lineCount, ErrorThreshold));
+            }
+            else if (lineCount > WarnThreshold)
+            {
+                Log.LogWarning(null, "BP0002", null, path, 1, 1, 0, 0,
+                    string.Format("File has {0} lines, exceeding the recommended {1}. Consider extracting a type before it reaches the {2} line hard limit.", lineCount, WarnThreshold, ErrorThreshold));
+            }
+        }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="EnforceFileLengths"
+          BeforeTargets="CoreCompile"
+          Condition="'$(EnableFileLengthCheck)' == 'true'">
+    <ItemGroup>
+      <FileLengthCandidate Include="@(Compile)" Condition="'%(Extension)' == '.cs'" />
+      <FileLengthCandidate Include="@(Page)" />
+      <FileLengthCandidate Include="@(ApplicationDefinition)" />
+      <FileLengthCandidate Include="@(MauiXaml)" />
+    </ItemGroup>
+
+    <CheckFileLengths Files="@(FileLengthCandidate)"
+                      WarnThreshold="$(FileLengthWarnThreshold)"
+                      ErrorThreshold="$(FileLengthErrorThreshold)" />
+  </Target>
+
+</Project>

@@ -1,0 +1,157 @@
+name: Release android
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  TAG_PREFIX: android-v
+  PROJECT: src/BPTracker.Mobile/BPTracker.Mobile.csproj
+
+jobs:
+  publish:
+    name: Build and publish APK
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check the project exists
+        id: guard
+        shell: pwsh
+        run: |
+          $exists = Test-Path $env:PROJECT
+          if (-not $exists) {
+            Write-Host "::warning::$env:PROJECT not found; skipping the android release."
+          }
+          "exists=$($exists.ToString().ToLower())" | Add-Content $env:GITHUB_OUTPUT
+
+      - name: Check signing secrets
+        id: signing
+        if: steps.guard.outputs.exists == 'true'
+        shell: pwsh
+        run: |
+          $hasKeystore = -not [string]::IsNullOrWhiteSpace('${{ secrets.ANDROID_KEYSTORE_BASE64 }}')
+          if (-not $hasKeystore) {
+            Write-Host '::warning::ANDROID_KEYSTORE_BASE64 is not set; building an unsigned APK and skipping publish.'
+          }
+          "signed=$($hasKeystore.ToString().ToLower())" | Add-Content $env:GITHUB_OUTPUT
+
+      - name: Set up .NET
+        if: steps.guard.outputs.exists == 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Set up JDK
+        if: steps.guard.outputs.exists == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: '17'
+
+      - name: Install the Android workload
+        if: steps.guard.outputs.exists == 'true'
+        run: dotnet workload install maui-android --skip-manifest-update
+
+      - name: Work out the next version
+        id: version
+        if: steps.guard.outputs.exists == 'true'
+        shell: pwsh
+        run: |
+          git fetch --tags --quiet
+
+          $latest = git tag -l "$env:TAG_PREFIX*" |
+            ForEach-Object { $_ -replace "^$env:TAG_PREFIX", '' } |
+            Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
+            ForEach-Object { [version]$_ } |
+            Sort-Object |
+            Select-Object -Last 1
+
+          if ($null -eq $latest) {
+            $next = '0.1.0'
+          }
+          else {
+            $next = "{0}.{1}.{2}" -f $latest.Major, $latest.Minor, ($latest.Build + 1)
+          }
+
+          Write-Host "Previous: $latest -> next: $next"
+          "version=$next" | Add-Content $env:GITHUB_OUTPUT
+          "tag=$env:TAG_PREFIX$next" | Add-Content $env:GITHUB_OUTPUT
+
+      - name: Restore the keystore
+        id: keystore
+        if: steps.guard.outputs.exists == 'true' && steps.signing.outputs.signed == 'true'
+        shell: pwsh
+        run: |
+          $path = Join-Path $env:RUNNER_TEMP 'bptracker.keystore'
+          [IO.File]::WriteAllBytes(
+            $path,
+            [Convert]::FromBase64String('${{ secrets.ANDROID_KEYSTORE_BASE64 }}'))
+          "path=$path" | Add-Content $env:GITHUB_OUTPUT
+
+      - name: Build signed APK
+        if: steps.guard.outputs.exists == 'true' && steps.signing.outputs.signed == 'true'
+        run: >
+          dotnet publish ${{ env.PROJECT }}
+          -c Release -f net10.0-android
+          -p:ApplicationDisplayVersion=${{ steps.version.outputs.version }}
+          -p:ApplicationVersion=${{ github.run_number }}
+          -p:AndroidPackageFormat=apk
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore="${{ steps.keystore.outputs.path }}"
+          -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          -p:AndroidSigningKeyPass="${{ secrets.ANDROID_KEY_PASSWORD }}"
+          -p:AndroidSigningStorePass="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+          -o publish
+
+      - name: Build unsigned APK
+        if: steps.guard.outputs.exists == 'true' && steps.signing.outputs.signed != 'true'
+        run: >
+          dotnet publish ${{ env.PROJECT }}
+          -c Release -f net10.0-android
+          -p:ApplicationDisplayVersion=${{ steps.version.outputs.version }}
+          -p:ApplicationVersion=${{ github.run_number }}
+          -p:AndroidPackageFormat=apk
+          -o publish
+
+      - name: Remove the keystore
+        if: always() && steps.keystore.outputs.path != ''
+        shell: pwsh
+        run: Remove-Item '${{ steps.keystore.outputs.path }}' -Force -ErrorAction SilentlyContinue
+
+      - name: Publish the release
+        if: steps.guard.outputs.exists == 'true' && steps.signing.outputs.signed == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $apk = Get-ChildItem publish -Filter '*-Signed.apk' -Recurse |
+            Select-Object -First 1
+          if ($null -eq $apk) {
+            $apk = Get-ChildItem publish -Filter '*.apk' -Recurse | Select-Object -First 1
+          }
+          if ($null -eq $apk) { throw 'No APK was produced.' }
+
+          git tag '${{ steps.version.outputs.tag }}'
+          git push origin '${{ steps.version.outputs.tag }}'
+
+          gh release create '${{ steps.version.outputs.tag }}' $apk.FullName `
+            --title 'BPTracker for Android ${{ steps.version.outputs.version }}' `
+            --notes 'Automated release. Install by sideloading the APK.'
+
+      - name: Upload build artifacts
+        if: always() && steps.guard.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ steps.version.outputs.version }}
+          path: publish/*.apk
+          retention-days: 14
+          if-no-files-found: ignore

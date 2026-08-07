@@ -1,0 +1,146 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "detail": "Build the solution with warnings treated as errors",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/dev.ps1",
+                "build"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "test",
+            "detail": "Run every test project",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/dev.ps1",
+                "test"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "coverage",
+            "detail": "Run tests, enforce the 85% floor and open the HTML report",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/dev.ps1",
+                "coverage"
+            ],
+            "group": "test",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "gates",
+            "detail": "Everything CI enforces: build, tests and the coverage floor",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/dev.ps1",
+                "gates",
+                "-NoBrowser"
+            ],
+            "group": "test",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "start emulator",
+            "detail": "Create the AVD if needed and boot the Android emulator",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/dev.ps1",
+                "emulator"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "list devices",
+            "detail": "Show attached Android devices and emulators",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/dev.ps1",
+                "devices"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "run desktop",
+            "detail": "Launch the WPF app",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/dev.ps1",
+                "desktop"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run android",
+            "detail": "Deploy to the attached Android device or emulator",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/dev.ps1",
+                "android"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "format",
+            "detail": "Apply .editorconfig formatting",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/dev.ps1",
+                "format"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "setup",
+            "detail": "Restore tools and packages, and check the Android workload",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/dev.ps1",
+                "setup"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

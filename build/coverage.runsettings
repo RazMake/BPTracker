@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <ResultsDirectory>artifacts/test-results</ResultsDirectory>
+  </RunConfiguration>
+
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+
+          <!-- The 85% gate is measured against the shared libraries only.
+               UI heads are excluded by design: they are kept logic-free and are
+               guarded instead by the file-length gate and the no-logic-in-code-behind rule.
+               Adding an assembly here, or removing one, requires an ADR. -->
+          <Include>
+            [BPTracker.Domain]*,
+            [BPTracker.Application]*,
+            [BPTracker.Infrastructure]*,
+            [BPTracker.Presentation]*
+          </Include>
+
+          <ExcludeByAttribute>
+            Obsolete,
+            GeneratedCodeAttribute,
+            CompilerGeneratedAttribute,
+            ExcludeFromCodeCoverageAttribute
+          </ExcludeByAttribute>
+
+          <ExcludeByFile>**/obj/**,**/*.g.cs,**/*.Designer.cs</ExcludeByFile>
+
+          <SkipAutoProps>true</SkipAutoProps>
+          <DeterministicReport>false</DeterministicReport>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

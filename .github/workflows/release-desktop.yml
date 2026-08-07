@@ -1,0 +1,99 @@
+name: Release desktop
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  TAG_PREFIX: desktop-v
+  PACK_ID: BPTracker
+
+jobs:
+  publish:
+    name: Pack and publish
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Work out the next version
+        id: version
+        shell: pwsh
+        run: |
+          git fetch --tags --quiet
+
+          $latest = git tag -l "$env:TAG_PREFIX*" |
+            ForEach-Object { $_ -replace "^$env:TAG_PREFIX", '' } |
+            Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
+            ForEach-Object { [version]$_ } |
+            Sort-Object |
+            Select-Object -Last 1
+
+          if ($null -eq $latest) {
+            $next = '0.1.0'
+          }
+          else {
+            $next = "{0}.{1}.{2}" -f $latest.Major, $latest.Minor, ($latest.Build + 1)
+          }
+
+          Write-Host "Previous: $latest -> next: $next"
+          "version=$next" | Add-Content $env:GITHUB_OUTPUT
+          "tag=$env:TAG_PREFIX$next" | Add-Content $env:GITHUB_OUTPUT
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Publish self-contained
+        run: >
+          dotnet publish src/BPTracker.Desktop/BPTracker.Desktop.csproj
+          -c Release -r win-x64 --self-contained
+          -p:Version=${{ steps.version.outputs.version }}
+          -o publish
+
+      - name: Build the Velopack release
+        run: >
+          dotnet vpk pack
+          --packId ${{ env.PACK_ID }}
+          --packVersion ${{ steps.version.outputs.version }}
+          --packDir publish
+          --mainExe BPTracker.exe
+          --packTitle BPTracker
+
+      - name: Tag the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag '${{ steps.version.outputs.tag }}'
+          git push origin '${{ steps.version.outputs.tag }}'
+
+      - name: Upload to GitHub Releases
+        # vpk owns the upload so the RELEASES manifest that the in-app updater
+        # reads is always consistent with the attached assets.
+        run: >
+          dotnet vpk upload github
+          --repoUrl https://github.com/${{ github.repository }}
+          --token ${{ github.token }}
+          --publish
+          --releaseName "BPTracker ${{ steps.version.outputs.version }}"
+          --tag ${{ steps.version.outputs.tag }}
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ steps.version.outputs.version }}
+          path: Releases
+          retention-days: 14

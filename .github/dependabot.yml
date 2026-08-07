@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Framework packages move together; separate PRs would just conflict.
+      microsoft:
+        patterns:
+          - "Microsoft.*"
+          - "System.*"
+      analyzers:
+        patterns:
+          - "SonarAnalyzer.*"
+          - "Roslynator.*"
+      test:
+        patterns:
+          - "xunit*"
+          - "NSubstitute"
+          - "Shouldly"
+          - "coverlet.*"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

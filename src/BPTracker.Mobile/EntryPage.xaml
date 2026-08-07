@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="BPTracker.Mobile.EntryPage"
+             Title="BPTracker"
+             BackgroundColor="{AppThemeBinding Light=#F4F6F8, Dark=#12181F}">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Settings" Clicked="OnOpenSettings" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="*, Auto" Padding="16">
+
+        <VerticalStackLayout Grid.Row="0" VerticalOptions="Center" Spacing="4">
+
+            <Label Text="SYSTOLIC"
+                   FontSize="13"
+                   CharacterSpacing="2"
+                   HorizontalOptions="Center"
+                   TextColor="#6B7A88" />
+
+            <Grid ColumnDefinitions="72, *, 72" ColumnSpacing="8">
+                <Button Grid.Column="0" Text="−" FontSize="28" HeightRequest="72"
+                        Clicked="OnSystolicDown" />
+                <Entry Grid.Column="1"
+                       x:Name="SystolicEntry"
+                       Text="{Binding Systolic}"
+                       Keyboard="Numeric"
+                       MaxLength="3"
+                       FontSize="56"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center"
+                       ReturnType="Next"
+                       Completed="OnSystolicCompleted" />
+                <Button Grid.Column="2" Text="+" FontSize="28" HeightRequest="72"
+                        Clicked="OnSystolicUp" />
+            </Grid>
+
+            <Label Text="DIASTOLIC"
+                   FontSize="13"
+                   CharacterSpacing="2"
+                   HorizontalOptions="Center"
+                   TextColor="#6B7A88"
+                   Margin="0,16,0,0" />
+
+            <Grid ColumnDefinitions="72, *, 72" ColumnSpacing="8">
+                <Button Grid.Column="0" Text="−" FontSize="28" HeightRequest="72"
+                        Clicked="OnDiastolicDown" />
+                <Entry Grid.Column="1"
+                       x:Name="DiastolicEntry"
+                       Text="{Binding Diastolic}"
+                       Keyboard="Numeric"
+                       MaxLength="3"
+                       FontSize="56"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center"
+                       ReturnType="Done" />
+                <Button Grid.Column="2" Text="+" FontSize="28" HeightRequest="72"
+                        Clicked="OnDiastolicUp" />
+            </Grid>
+
+            <Label x:Name="CategoryLabel"
+                   FontSize="20"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   Margin="0,20,0,0" />
+
+            <Label Text="{Binding Validation.Message}"
+                   TextColor="#D64545"
+                   FontSize="14"
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center" />
+
+            <!-- Everything optional stays collapsed so it can never slow down an entry. -->
+            <Border Margin="0,16,0,0"
+                    StrokeThickness="0"
+                    BackgroundColor="Transparent">
+                <VerticalStackLayout>
+                    <Button x:Name="DetailsToggle"
+                            Text="Add detail"
+                            FontSize="14"
+                            BackgroundColor="Transparent"
+                            TextColor="#2D6CDF"
+                            Clicked="OnToggleDetails" />
+
+                    <VerticalStackLayout x:Name="DetailsPanel" IsVisible="False" Spacing="8">
+                        <Picker Title="Arm"
+                                x:Name="ArmPicker"
+                                SelectedIndexChanged="OnArmChanged">
+                            <Picker.ItemsSource>
+                                <x:Array Type="{x:Type x:String}">
+                                    <x:String>Not recorded</x:String>
+                                    <x:String>Left</x:String>
+                                    <x:String>Right</x:String>
+                                </x:Array>
+                            </Picker.ItemsSource>
+                        </Picker>
+
+                        <Picker Title="Position"
+                                x:Name="PositionPicker"
+                                SelectedIndexChanged="OnPositionChanged">
+                            <Picker.ItemsSource>
+                                <x:Array Type="{x:Type x:String}">
+                                    <x:String>Not recorded</x:String>
+                                    <x:String>Sitting</x:String>
+                                    <x:String>Standing</x:String>
+                                    <x:String>Lying</x:String>
+                                </x:Array>
+                            </Picker.ItemsSource>
+                        </Picker>
+
+                        <Editor Placeholder="Note"
+                                Text="{Binding Note}"
+                                HeightRequest="80" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="1" Spacing="8">
+            <Label x:Name="StatusLabel"
+                   Text="{Binding StatusMessage}"
+                   FontSize="14"
+                   HorizontalOptions="Center"
+                   TextColor="#2E9E5B" />
+
+            <Button Text="Save"
+                    FontSize="20"
+                    FontAttributes="Bold"
+                    HeightRequest="64"
+                    BackgroundColor="#2D6CDF"
+                    TextColor="White"
+                    Command="{Binding SaveCommand}" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

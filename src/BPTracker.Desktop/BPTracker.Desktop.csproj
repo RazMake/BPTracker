@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>BPTracker.Desktop</RootNamespace>
+    <AssemblyName>BPTracker</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- Velopack needs to run before any UI, so the entry point is explicit. -->
+    <StartupObject>BPTracker.Desktop.Program</StartupObject>
+
+    <!-- UI heads are deliberately logic-free, so they are neither documented nor coverage-gated. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!-- NU1701: LiveCharts' WPF backend pulls SkiaSharp.Views.WPF / OpenTK, which still publish
+         .NET Framework assets. They load correctly on net10.0-windows via the compatibility shim.
+         Scoped to this project only so the rest of the repo keeps a clean restore. -->
+    <NoWarn>$(NoWarn);CS1591;NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BPTracker.Application\BPTracker.Application.csproj" />
+    <ProjectReference Include="..\BPTracker.Domain\BPTracker.Domain.csproj" />
+    <ProjectReference Include="..\BPTracker.Infrastructure\BPTracker.Infrastructure.csproj" />
+    <ProjectReference Include="..\BPTracker.Presentation\BPTracker.Presentation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Velopack" />
+  </ItemGroup>
+
+  <ItemGroup Label="Update feed">
+    <!-- Single source of truth for where the app looks for updates. -->
+    <AssemblyMetadata Include="ReleasesUrl" Value="https://github.com/RazMake/BPTracker" />
+  </ItemGroup>
+
+</Project>

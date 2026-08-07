@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BPTracker.Domain/BPTracker.Domain.csproj" />
+    <Project Path="src/BPTracker.Application/BPTracker.Application.csproj" />
+    <Project Path="src/BPTracker.Infrastructure/BPTracker.Infrastructure.csproj" />
+    <Project Path="src/BPTracker.Presentation/BPTracker.Presentation.csproj" />
+    <Project Path="src/BPTracker.Desktop/BPTracker.Desktop.csproj" />
+    <Project Path="src/BPTracker.Mobile/BPTracker.Mobile.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BPTracker.TestSupport/BPTracker.TestSupport.csproj" />
+    <Project Path="tests/BPTracker.Domain.Tests/BPTracker.Domain.Tests.csproj" />
+    <Project Path="tests/BPTracker.Application.Tests/BPTracker.Application.Tests.csproj" />
+    <Project Path="tests/BPTracker.Infrastructure.Tests/BPTracker.Infrastructure.Tests.csproj" />
+    <Project Path="tests/BPTracker.Presentation.Tests/BPTracker.Presentation.Tests.csproj" />
+  </Folder>
+</Solution>

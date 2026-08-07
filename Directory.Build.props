@@ -1,0 +1,35 @@
+<Project>
+
+  <PropertyGroup Label="Language">
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Zero-warning policy">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
+    <WarningLevel>9999</WarningLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Versioning">
+    <!-- Major.Minor are human-owned. CI appends the auto-bumped patch via -p:Version=. -->
+    <VersionPrefix Condition="'$(VersionPrefix)' == ''">0.1.0</VersionPrefix>
+    <Authors>RazMake</Authors>
+    <Product>BPTracker</Product>
+    <Company>RazMake</Company>
+  </PropertyGroup>
+
+  <PropertyGroup Label="File size gate">
+    <FileLengthWarnThreshold>300</FileLengthWarnThreshold>
+    <FileLengthErrorThreshold>400</FileLengthErrorThreshold>
+  </PropertyGroup>
+
+</Project>

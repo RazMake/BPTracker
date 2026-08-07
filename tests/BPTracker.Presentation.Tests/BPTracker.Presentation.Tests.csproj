@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BPTracker.Presentation\BPTracker.Presentation.csproj" />
+    <ProjectReference Include="..\BPTracker.TestSupport\BPTracker.TestSupport.csproj" />
+  </ItemGroup>
+
+</Project>

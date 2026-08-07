@@ -1,0 +1,20 @@
+{
+    "dotnet.defaultSolution": "BPTracker.slnx",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit",
+        "source.organizeImports": "explicit"
+    },
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "omnisharp.enableEditorConfigSupport": true,
+    "coverage-gutters.coverageBaseDir": "artifacts/coverage",
+    "coverage-gutters.coverageFileNames": [
+        "coverage.cobertura.xml"
+    ],
+    "search.exclude": {
+        "**/bin": true,
+        "**/obj": true,
+        "**/artifacts": true
+    }
+}

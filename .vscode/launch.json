@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Desktop (WPF)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/BPTracker.Desktop/bin/Debug/net10.0-windows/BPTracker.exe",
+            "cwd": "${workspaceFolder}/src/BPTracker.Desktop",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Desktop (WPF, Release)",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/BPTracker.Desktop/bin/Release/net10.0-windows/BPTracker.exe",
+            "cwd": "${workspaceFolder}/src/BPTracker.Desktop",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Attach to process",
+            "type": "coreclr",
+            "request": "attach"
+        }
+    ]
+}

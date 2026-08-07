@@ -1,0 +1,65 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <SolidColorBrush x:Key="Surface" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SurfaceAlt" Color="#F4F6F8" />
+    <SolidColorBrush x:Key="Ink" Color="#1B2733" />
+    <SolidColorBrush x:Key="InkMuted" Color="#6B7A88" />
+    <SolidColorBrush x:Key="Accent" Color="#2D6CDF" />
+    <SolidColorBrush x:Key="Line" Color="#DDE3E9" />
+
+    <SolidColorBrush x:Key="CategoryNormal" Color="#2E9E5B" />
+    <SolidColorBrush x:Key="CategoryElevated" Color="#D9A420" />
+    <SolidColorBrush x:Key="CategoryStage1" Color="#E07A24" />
+    <SolidColorBrush x:Key="CategoryStage2" Color="#D64545" />
+    <SolidColorBrush x:Key="CategoryCrisis" Color="#8B1E1E" />
+    <SolidColorBrush x:Key="CategoryLow" Color="#3E8FB0" />
+
+    <Style x:Key="Heading" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource Ink}" />
+        <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+
+    <Style x:Key="Caption" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource InkMuted}" />
+    </Style>
+
+    <Style x:Key="Card" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Surface}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="16" />
+    </Style>
+
+    <Style x:Key="PressureBox" TargetType="TextBox">
+        <Setter Property="FontSize" Value="44" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{StaticResource Ink}" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="Width" Value="128" />
+    </Style>
+
+    <Style x:Key="StepButton" TargetType="Button">
+        <Setter Property="Width" Value="56" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="Margin" Value="2" />
+    </Style>
+
+    <Style x:Key="PrimaryButton" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource Accent}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Padding" Value="16,10" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+</ResourceDictionary>

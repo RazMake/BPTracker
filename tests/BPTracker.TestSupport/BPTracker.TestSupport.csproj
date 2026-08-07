@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <IsTestProject>false</IsTestProject>
+    <RootNamespace>BPTracker.TestSupport</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BPTracker.Application\BPTracker.Application.csproj" />
+    <ProjectReference Include="..\..\src\BPTracker.Domain\BPTracker.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

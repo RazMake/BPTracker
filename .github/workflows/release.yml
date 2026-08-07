@@ -1,0 +1,103 @@
+name: Release
+
+# Every push to main publishes. Which app gets released is decided from the changed paths:
+#   shared code / build config -> both apps
+#   only src/BPTracker.Desktop  -> desktop only
+#   only src/BPTracker.Mobile   -> android only
+#   docs, memory bank, workflows -> neither
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_desktop:
+        description: Force a desktop release
+        type: boolean
+        default: false
+      release_android:
+        description: Force an android release
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  verify:
+    name: Verify
+    uses: ./.github/workflows/ci.yml
+
+  decide:
+    name: Decide what to release
+    runs-on: ubuntu-latest
+    needs: verify
+    outputs:
+      desktop: ${{ steps.classify.outputs.desktop }}
+      android: ${{ steps.classify.outputs.android }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify changed paths
+        id: classify
+        shell: pwsh
+        run: |
+          $forceDesktop = '${{ github.event.inputs.release_desktop }}' -eq 'true'
+          $forceAndroid = '${{ github.event.inputs.release_android }}' -eq 'true'
+
+          $before = '${{ github.event.before }}'
+          $sha = '${{ github.sha }}'
+          $empty = '0000000000000000000000000000000000000000'
+
+          if ($forceDesktop -or $forceAndroid) {
+            $files = @()
+          }
+          elseif ([string]::IsNullOrWhiteSpace($before) -or $before -eq $empty) {
+            # First push, or history was rewritten. Be safe and release both.
+            Write-Host 'No usable base commit; releasing both apps.'
+            $files = @('src/BPTracker.Domain/force')
+          }
+          else {
+            $files = git diff --name-only $before $sha
+          }
+
+          Write-Host "Changed files:`n$($files -join "`n")"
+
+          # Anything shared affects both apps.
+          $sharedPattern = '^(src/BPTracker\.(Domain|Application|Infrastructure|Presentation)/|build/|Directory\.|global\.json|\.config/|BPTracker\.slnx)'
+
+          $desktop = $forceDesktop
+          $android = $forceAndroid
+
+          foreach ($file in $files) {
+            if ($file -match $sharedPattern) { $desktop = $true; $android = $true }
+            elseif ($file -match '^src/BPTracker\.Desktop/') { $desktop = $true }
+            elseif ($file -match '^src/BPTracker\.Mobile/') { $android = $true }
+          }
+
+          Write-Host "desktop=$desktop android=$android"
+          "desktop=$($desktop.ToString().ToLower())" | Add-Content $env:GITHUB_OUTPUT
+          "android=$($android.ToString().ToLower())" | Add-Content $env:GITHUB_OUTPUT
+
+  desktop:
+    name: Release desktop
+    needs: decide
+    if: needs.decide.outputs.desktop == 'true'
+    uses: ./.github/workflows/release-desktop.yml
+    secrets: inherit
+
+  android:
+    name: Release android
+    needs: decide
+    if: needs.decide.outputs.android == 'true'
+    uses: ./.github/workflows/release-android.yml
+    secrets: inherit

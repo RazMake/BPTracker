@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.dotnet-maui",
+        "editorconfig.editorconfig",
+        "github.vscode-github-actions",
+        "ryanluker.vscode-coverage-gutters"
+    ]
+}

@@ -1,0 +1,88 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,xml,csproj,props,targets,runsettings,slnx}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# ---- usings ----
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:warning
+
+# ---- modern C# ----
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_braces = true:warning
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_prefer_primary_constructors = true:suggestion
+
+# ---- immutability / correctness ----
+dotnet_style_readonly_field = true:warning
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+csharp_prefer_static_local_function = true:warning
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:warning
+
+# ---- naming: interfaces prefixed with I ----
+dotnet_naming_rule.interfaces_start_with_i.severity = warning
+dotnet_naming_rule.interfaces_start_with_i.symbols = interface_symbol
+dotnet_naming_rule.interfaces_start_with_i.style = i_prefix_style
+dotnet_naming_symbols.interface_symbol.applicable_kinds = interface
+dotnet_naming_style.i_prefix_style.required_prefix = I
+dotnet_naming_style.i_prefix_style.capitalization = pascal_case
+
+# ---- private fields: _camelCase ----
+dotnet_naming_rule.private_fields_underscore.severity = warning
+dotnet_naming_rule.private_fields_underscore.symbols = private_field_symbol
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel_style
+dotnet_naming_symbols.private_field_symbol.applicable_kinds = field
+dotnet_naming_symbols.private_field_symbol.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel_style.required_prefix = _
+dotnet_naming_style.underscore_camel_style.capitalization = camel_case
+
+# ---- modularity / SOLID enforcement ----
+# Cognitive complexity: a method this tangled is not unit-testable.
+dotnet_diagnostic.S3776.severity = error
+# Too many parameters -> the type is doing too much (SRP).
+dotnet_diagnostic.S107.severity = error
+# Method should not have too many lines.
+dotnet_diagnostic.S138.severity = error
+# Type should not depend on too many other types (coupling).
+dotnet_diagnostic.S1200.severity = warning
+# Do not nest too deeply.
+dotnet_diagnostic.S134.severity = warning
+# Duplicated string literals -> DRY.
+dotnet_diagnostic.S1192.severity = warning
+
+# ---- deliberately relaxed, with reasons ----
+# CA1848 (LoggerMessage source-gen) is overkill for a two-user desktop app.
+dotnet_diagnostic.CA1848.severity = none
+# CA1303 (localise literals) - app is single-language for now.
+dotnet_diagnostic.CA1303.severity = none
+
+[src/**/*.cs]
+# Public surface of shared libraries must be documented.
+dotnet_diagnostic.CS1591.severity = warning
+
+[tests/**/*.cs]
+# Tests may be verbose and undocumented; they are not a public API.
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.S4144.severity = none
+# Every test must actually assert something.
+dotnet_diagnostic.S2699.severity = warning
+# xUnit1051 wants TestContext.Current.CancellationToken threaded through every awaited call.
+# These are millisecond-scale unit tests with nothing to cancel, so the rule only adds noise.
+# Revisit if long-running or integration tests are added.
+dotnet_diagnostic.xUnit1051.severity = none
