@@ -2,135 +2,104 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="BPTracker.Mobile.EntryPage"
-             Title="BPTracker"
-             BackgroundColor="{AppThemeBinding Light=#F4F6F8, Dark=#12181F}">
+             Title=""
+             SizeChanged="OnPageSizeChanged">
 
     <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Chart" Clicked="OnOpenChart" />
         <ToolbarItem Text="Settings" Clicked="OnOpenSettings" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="*, Auto" Padding="16">
+    <!-- One FlexLayout so the orientation change is a single Direction switch. Reassigning
+         Grid.Row at runtime left the old layout painted behind the new one on Android. -->
+    <FlexLayout x:Name="RootLayout"
+                Direction="Column"
+                AlignItems="Stretch"
+                BackgroundColor="{StaticResource Background}"
+                Padding="12">
 
-        <VerticalStackLayout Grid.Row="0" VerticalOptions="Center" Spacing="4">
-
-            <Label Text="SYSTOLIC"
-                   FontSize="13"
-                   CharacterSpacing="2"
-                   HorizontalOptions="Center"
-                   TextColor="#6B7A88" />
-
-            <Grid ColumnDefinitions="72, *, 72" ColumnSpacing="8">
-                <Button Grid.Column="0" Text="−" FontSize="28" HeightRequest="72"
-                        Clicked="OnSystolicDown" />
-                <Entry Grid.Column="1"
-                       x:Name="SystolicEntry"
+        <Border x:Name="SystolicCard" StrokeShape="RoundRectangle 18" Margin="4"
+                FlexLayout.Grow="1" FlexLayout.Basis="0">
+            <Grid RowDefinitions="Auto, *, Auto" Padding="12,10">
+                <Label Grid.Row="0" Text="SYSTOLIC" Style="{StaticResource CaptionLabel}"
+                       FontSize="20" HorizontalOptions="Center" />
+                <Label Grid.Row="1" x:Name="SystolicValue"
                        Text="{Binding Systolic}"
-                       Keyboard="Numeric"
-                       MaxLength="3"
-                       FontSize="56"
+                       FontSize="76"
                        FontAttributes="Bold"
-                       HorizontalTextAlignment="Center"
-                       ReturnType="Next"
-                       Completed="OnSystolicCompleted" />
-                <Button Grid.Column="2" Text="+" FontSize="28" HeightRequest="72"
-                        Clicked="OnSystolicUp" />
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+                <Label Grid.Row="2" Text="SLIDE TO CHANGE, TAP TO TYPE"
+                       Style="{StaticResource CaptionLabel}"
+                       HorizontalOptions="Center" />
             </Grid>
+            <Border.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnSystolicPan" />
+                <TapGestureRecognizer Tapped="OnSystolicTapped" />
+            </Border.GestureRecognizers>
+        </Border>
 
-            <Label Text="DIASTOLIC"
-                   FontSize="13"
-                   CharacterSpacing="2"
-                   HorizontalOptions="Center"
-                   TextColor="#6B7A88"
-                   Margin="0,16,0,0" />
-
-            <Grid ColumnDefinitions="72, *, 72" ColumnSpacing="8">
-                <Button Grid.Column="0" Text="−" FontSize="28" HeightRequest="72"
-                        Clicked="OnDiastolicDown" />
-                <Entry Grid.Column="1"
-                       x:Name="DiastolicEntry"
+        <Border x:Name="DiastolicCard" StrokeShape="RoundRectangle 18" Margin="4"
+                FlexLayout.Grow="1" FlexLayout.Basis="0">
+            <Grid RowDefinitions="Auto, *, Auto" Padding="12,10">
+                <Label Grid.Row="0" Text="DIASTOLIC" Style="{StaticResource CaptionLabel}"
+                       FontSize="20" HorizontalOptions="Center" />
+                <Label Grid.Row="1" x:Name="DiastolicValue"
                        Text="{Binding Diastolic}"
-                       Keyboard="Numeric"
-                       MaxLength="3"
-                       FontSize="56"
+                       FontSize="76"
                        FontAttributes="Bold"
-                       HorizontalTextAlignment="Center"
-                       ReturnType="Done" />
-                <Button Grid.Column="2" Text="+" FontSize="28" HeightRequest="72"
-                        Clicked="OnDiastolicUp" />
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+                <Label Grid.Row="2" Text="SLIDE TO CHANGE, TAP TO TYPE"
+                       Style="{StaticResource CaptionLabel}"
+                       HorizontalOptions="Center" />
             </Grid>
+            <Border.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnDiastolicPan" />
+                <TapGestureRecognizer Tapped="OnDiastolicTapped" />
+            </Border.GestureRecognizers>
+        </Border>
 
-            <Label x:Name="CategoryLabel"
-                   FontSize="20"
-                   FontAttributes="Bold"
-                   HorizontalOptions="Center"
-                   Margin="0,20,0,0" />
+        <Grid x:Name="ActionPanel" RowDefinitions="*, Auto" Margin="4"
+              FlexLayout.Grow="1" FlexLayout.Basis="0">
 
-            <Label Text="{Binding Validation.Message}"
-                   TextColor="#D64545"
-                   FontSize="14"
-                   HorizontalOptions="Center"
-                   HorizontalTextAlignment="Center" />
+            <VerticalStackLayout Grid.Row="0" Spacing="4" VerticalOptions="End" Margin="0,0,0,10">
+                <Label x:Name="CategoryLabel"
+                       FontSize="20"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center" />
 
-            <!-- Everything optional stays collapsed so it can never slow down an entry. -->
-            <Border Margin="0,16,0,0"
-                    StrokeThickness="0"
-                    BackgroundColor="Transparent">
-                <VerticalStackLayout>
-                    <Button x:Name="DetailsToggle"
-                            Text="Add detail"
-                            FontSize="14"
-                            BackgroundColor="Transparent"
-                            TextColor="#2D6CDF"
-                            Clicked="OnToggleDetails" />
+                <Label Text="{Binding Validation.Message}"
+                       TextColor="{StaticResource Bad}"
+                       HorizontalOptions="Center"
+                       HorizontalTextAlignment="Center" />
 
-                    <VerticalStackLayout x:Name="DetailsPanel" IsVisible="False" Spacing="8">
-                        <Picker Title="Arm"
-                                x:Name="ArmPicker"
-                                SelectedIndexChanged="OnArmChanged">
-                            <Picker.ItemsSource>
-                                <x:Array Type="{x:Type x:String}">
-                                    <x:String>Not recorded</x:String>
-                                    <x:String>Left</x:String>
-                                    <x:String>Right</x:String>
-                                </x:Array>
-                            </Picker.ItemsSource>
-                        </Picker>
+                <!-- Deliberately quiet: almost no reading needs one, and nothing here may slow
+                     down the two numbers that do matter. -->
+                <Entry Placeholder="Tag (optional)"
+                       Text="{Binding Tag}"
+                       MaxLength="100"
+                       FontSize="13"
+                       ReturnType="Done"
+                       HorizontalTextAlignment="Center" />
+            </VerticalStackLayout>
 
-                        <Picker Title="Position"
-                                x:Name="PositionPicker"
-                                SelectedIndexChanged="OnPositionChanged">
-                            <Picker.ItemsSource>
-                                <x:Array Type="{x:Type x:String}">
-                                    <x:String>Not recorded</x:String>
-                                    <x:String>Sitting</x:String>
-                                    <x:String>Standing</x:String>
-                                    <x:String>Lying</x:String>
-                                </x:Array>
-                            </Picker.ItemsSource>
-                        </Picker>
+            <Grid Grid.Row="1" ColumnDefinitions="Auto, *" ColumnSpacing="8">
+                <Button Grid.Column="0"
+                        Text="Reset"
+                        FontSize="18"
+                        HeightRequest="64"
+                        WidthRequest="110"
+                        Command="{Binding ResetCommand}" />
 
-                        <Editor Placeholder="Note"
-                                Text="{Binding Note}"
-                                HeightRequest="80" />
-                    </VerticalStackLayout>
-                </VerticalStackLayout>
-            </Border>
-        </VerticalStackLayout>
-
-        <VerticalStackLayout Grid.Row="1" Spacing="8">
-            <Label x:Name="StatusLabel"
-                   Text="{Binding StatusMessage}"
-                   FontSize="14"
-                   HorizontalOptions="Center"
-                   TextColor="#2E9E5B" />
-
-            <Button Text="Save"
-                    FontSize="20"
-                    FontAttributes="Bold"
-                    HeightRequest="64"
-                    BackgroundColor="#2D6CDF"
-                    TextColor="White"
-                    Command="{Binding SaveCommand}" />
-        </VerticalStackLayout>
-    </Grid>
+                <Button Grid.Column="1"
+                        Text="Save"
+                        Style="{StaticResource PrimaryButton}"
+                        FontSize="20"
+                        HeightRequest="64"
+                        Command="{Binding SaveCommand}" />
+            </Grid>
+        </Grid>
+    </FlexLayout>
 </ContentPage>
+

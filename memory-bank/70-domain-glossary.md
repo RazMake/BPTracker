@@ -9,7 +9,8 @@
 | **MAP** | Mean arterial pressure, estimated as `diastolic + (pulse pressure / 3)`. |
 | **Reading** | One measurement: two pressures, a timestamp, and optional context. |
 | **Retracted** | Soft-deleted. The record stays as a tombstone so the deletion can sync. |
-| **Measurement context** | Optional circumstances: arm, body position, note. |
+| **Measurement context** | Optional circumstances: arm, body position, tag. |
+| **Tag** | Optional one-line label on a reading, at most 100 characters, for the rare measurement that needs explaining. Called `Note` on disk, for compatibility. |
 
 ## Categories (ACC/AHA 2017)
 

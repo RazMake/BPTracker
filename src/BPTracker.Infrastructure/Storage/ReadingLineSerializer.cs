@@ -31,7 +31,11 @@ public sealed record ReadingLine
     /// <summary>Posture during measurement.</summary>
     public string Position { get; init; } = nameof(BodyPosition.Unspecified);
 
-    /// <summary>Optional note.</summary>
+    /// <summary>Optional short tag.</summary>
+    /// <remarks>
+    /// Still called <c>Note</c> on disk. The domain renamed it to <c>Tag</c>, but journals already
+    /// written by either app use this name, and a device must never rewrite another device's file.
+    /// </remarks>
     public string? Note { get; init; }
 
     /// <summary>When the record last changed, ISO-8601 UTC. Drives last-writer-wins.</summary>
@@ -63,7 +67,7 @@ public static class ReadingLineSerializer
             MeasuredAt = reading.MeasuredAt.ToString("O", CultureInfo.InvariantCulture),
             Arm = reading.Context.Arm.ToString(),
             Position = reading.Context.Position.ToString(),
-            Note = reading.Context.Note,
+            Note = reading.Context.Tag,
             UpdatedAt = reading.UpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             Deleted = reading.IsDeleted,
         };
@@ -117,7 +121,10 @@ public static class ReadingLineSerializer
                 {
                     Arm = ParseEnum(parsed.Arm, MeasurementArm.Unspecified),
                     Position = ParseEnum(parsed.Position, BodyPosition.Unspecified),
-                    Note = parsed.Note,
+
+                    // Clamped rather than validated: a journal written before the limit shrank
+                    // must still load, and Create rejects an over-length tag outright.
+                    Tag = MeasurementContext.Clamp(parsed.Note),
                 },
                 parsed.Id);
 

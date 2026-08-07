@@ -188,7 +188,13 @@ function Resolve-JavaHome {
         Sort-Object Name -Descending |
         Select-Object -First 1
 
-    return $candidate?.FullName
+    # Not $candidate?.FullName: PowerShell allows ? in a variable name, so that reads a variable
+    # called "candidate?" and silently returns null.
+    if ($candidate) {
+        return $candidate.FullName
+    }
+
+    return $null
 }
 
 function Invoke-Android {
@@ -235,7 +241,9 @@ function Invoke-Setup {
     Write-Step 'Checking the Android toolchain'
 
     $workloads = dotnet workload list
-    if ($workloads -notmatch 'android') {
+    # -match against an array returns the matching lines, so an empty result means "not installed".
+    # `$workloads -notmatch 'android'` returns every other line and is therefore always truthy.
+    if (-not ($workloads -match 'android')) {
         Write-Host 'Android workload missing. In an elevated shell run:' -ForegroundColor Yellow
         Write-Host '    dotnet workload install maui-android' -ForegroundColor Yellow
     }

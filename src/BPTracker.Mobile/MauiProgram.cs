@@ -3,6 +3,7 @@ using BPTracker.Application.Readings;
 using BPTracker.Application.Trends;
 using BPTracker.Infrastructure.Storage;
 using BPTracker.Infrastructure.Time;
+using BPTracker.Presentation.Charts;
 using BPTracker.Presentation.Readings;
 using BPTracker.Presentation.Storage;
 using Microsoft.Extensions.Logging;
@@ -36,8 +37,10 @@ public static class MauiProgram
 
         builder.Services.AddTransient<ReadingEntryViewModel>();
         builder.Services.AddTransient<HistoryViewModel>();
+        builder.Services.AddTransient<ChartViewModel>();
         builder.Services.AddTransient<StorageLocationViewModel>();
         builder.Services.AddTransient<EntryPage>();
+        builder.Services.AddTransient<ChartPage>();
         builder.Services.AddTransient<SettingsPage>();
 
 #if DEBUG

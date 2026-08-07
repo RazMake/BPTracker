@@ -9,8 +9,12 @@ namespace BPTracker.Domain.Readings;
 /// </remarks>
 public readonly record struct MeasurementContext
 {
-    /// <summary>Maximum length of <see cref="Note"/>.</summary>
-    public const int MaxNoteLength = 500;
+    /// <summary>Maximum length of <see cref="Tag"/>.</summary>
+    /// <remarks>
+    /// Short on purpose. A tag is a word or two explaining an outlier, not a diary entry, and it
+    /// has to fit on one line on a phone.
+    /// </remarks>
+    public const int MaxTagLength = 100;
 
     /// <summary>Nothing recorded beyond the two pressures.</summary>
     public static MeasurementContext None => default;
@@ -21,27 +25,35 @@ public readonly record struct MeasurementContext
     /// <summary>Posture during measurement.</summary>
     public BodyPosition Position { get; init; }
 
-    /// <summary>Optional free-text note.</summary>
-    public string? Note { get; init; }
+    /// <summary>Optional short free-text tag, such as "after a run".</summary>
+    public string? Tag { get; init; }
 
     /// <summary>
-    /// Returns a copy with the note trimmed, and empty notes collapsed to <see langword="null"/>.
+    /// Returns a copy with the tag trimmed, and empty tags collapsed to <see langword="null"/>.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The note exceeds <see cref="MaxNoteLength"/>.</exception>
+    /// <exception cref="InvalidOperationException">The tag exceeds <see cref="MaxTagLength"/>.</exception>
     public MeasurementContext Normalised()
     {
-        if (string.IsNullOrWhiteSpace(Note))
+        if (string.IsNullOrWhiteSpace(Tag))
         {
-            return this with { Note = null };
+            return this with { Tag = null };
         }
 
-        var trimmed = Note.Trim();
-        if (trimmed.Length > MaxNoteLength)
+        var trimmed = Tag.Trim();
+        if (trimmed.Length > MaxTagLength)
         {
             throw new InvalidOperationException(
-                $"Note must be {MaxNoteLength} characters or fewer, but was {trimmed.Length}.");
+                $"Tag must be {MaxTagLength} characters or fewer, but was {trimmed.Length}.");
         }
 
-        return this with { Note = trimmed };
+        return this with { Tag = trimmed };
     }
+
+    /// <summary>Shortens a tag to <see cref="MaxTagLength"/> rather than rejecting it.</summary>
+    /// <remarks>
+    /// For tags arriving from a journal file, which may predate the current limit or have been
+    /// hand-edited. Losing the tail of a tag is better than losing the reading.
+    /// </remarks>
+    public static string? Clamp(string? tag) =>
+        tag is not null && tag.Length > MaxTagLength ? tag[..MaxTagLength] : tag;
 }

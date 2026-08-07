@@ -1,44 +1,41 @@
 ﻿<?xml version="1.0" encoding="UTF-8" ?>
-<ResourceDictionary 
+<!--
+    One dark palette. The app is dark only, so there is no light variant to keep in step and no
+    AppThemeBinding anywhere. See also Platforms\Android\Resources\values\colors.xml, which has to
+    repeat the window and status bar colours for the native splash theme.
+-->
+<ResourceDictionary
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
+    <Color x:Key="Background">#0F1419</Color>
+    <Color x:Key="Surface">#181F27</Color>
+    <Color x:Key="SurfacePressed">#212B35</Color>
+    <Color x:Key="Stroke">#2C3742</Color>
 
-    <Color x:Key="Primary">#512BD4</Color>
-    <Color x:Key="PrimaryDark">#ac99ea</Color>
-    <Color x:Key="PrimaryDarkText">#242424</Color>
-    <Color x:Key="Secondary">#DFD8F7</Color>
-    <Color x:Key="SecondaryDarkText">#9880e5</Color>
-    <Color x:Key="Tertiary">#2B0B98</Color>
+    <Color x:Key="TextPrimary">#E9EEF3</Color>
+    <Color x:Key="TextMuted">#8A98A6</Color>
+    <Color x:Key="TextDisabled">#5A6773</Color>
 
-    <Color x:Key="White">White</Color>
-    <Color x:Key="Black">Black</Color>
-    <Color x:Key="Magenta">#D600AA</Color>
-    <Color x:Key="MidnightBlue">#190649</Color>
-    <Color x:Key="OffBlack">#1f1f1f</Color>
+    <Color x:Key="Accent">#4C8DFF</Color>
+    <Color x:Key="AccentPressed">#3B72D6</Color>
 
-    <Color x:Key="Gray100">#E1E1E1</Color>
-    <Color x:Key="Gray200">#C8C8C8</Color>
-    <Color x:Key="Gray300">#ACACAC</Color>
-    <Color x:Key="Gray400">#919191</Color>
-    <Color x:Key="Gray500">#6E6E6E</Color>
-    <Color x:Key="Gray600">#404040</Color>
-    <Color x:Key="Gray900">#212121</Color>
-    <Color x:Key="Gray950">#141414</Color>
+    <!-- Kept in step with the chart, which paints the same three states. -->
+    <Color x:Key="Good">#3FBF77</Color>
+    <Color x:Key="Warn">#E8912D</Color>
+    <Color x:Key="Bad">#E5484D</Color>
 
-    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
-    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
-    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
-    <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource White}"/>
-    <SolidColorBrush x:Key="BlackBrush" Color="{StaticResource Black}"/>
+    <!-- Chart. Both lines are solid and neutral; the shading behind them carries the judgement,
+         which is why the off-target wash is barely-there rather than loud. -->
+    <Color x:Key="SeriesSystolic">#7EC8FF</Color>
+    <Color x:Key="SeriesDiastolic">#B79CFF</Color>
+    <Color x:Key="SeriesCrisis">#FF2D3E</Color>
+    <Color x:Key="Tagged">#FFD166</Color>
+    <Color x:Key="BandOffTarget">#1FE5484D</Color>
+    <Color x:Key="BandOnTarget">#143FBF77</Color>
 
-    <SolidColorBrush x:Key="Gray100Brush" Color="{StaticResource Gray100}"/>
-    <SolidColorBrush x:Key="Gray200Brush" Color="{StaticResource Gray200}"/>
-    <SolidColorBrush x:Key="Gray300Brush" Color="{StaticResource Gray300}"/>
-    <SolidColorBrush x:Key="Gray400Brush" Color="{StaticResource Gray400}"/>
-    <SolidColorBrush x:Key="Gray500Brush" Color="{StaticResource Gray500}"/>
-    <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
-    <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
-    <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource Background}" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Surface}" />
+    <SolidColorBrush x:Key="StrokeBrush" Color="{StaticResource Stroke}" />
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent}" />
 </ResourceDictionary>

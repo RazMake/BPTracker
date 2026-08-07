@@ -19,7 +19,7 @@ public sealed class ReadingLineSerializerTests
             {
                 Arm = MeasurementArm.Right,
                 Position = BodyPosition.Sitting,
-                Note = "after coffee",
+                Tag = "after coffee",
             });
 
         ReadingLineSerializer.TryParse(ReadingLineSerializer.ToLine(original), out var parsed)
@@ -30,7 +30,7 @@ public sealed class ReadingLineSerializerTests
         parsed.Diastolic.MmHg.ShouldBe(87);
         parsed.Context.Arm.ShouldBe(MeasurementArm.Right);
         parsed.Context.Position.ShouldBe(BodyPosition.Sitting);
-        parsed.Context.Note.ShouldBe("after coffee");
+        parsed.Context.Tag.ShouldBe("after coffee");
         parsed.UpdatedAtUtc.ShouldBe(original.UpdatedAtUtc);
         parsed.IsDeleted.ShouldBeFalse();
     }

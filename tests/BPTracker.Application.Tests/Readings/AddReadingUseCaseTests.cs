@@ -55,12 +55,12 @@ public sealed class AddReadingUseCaseTests
         var request = new AddReadingRequest(
             120,
             80,
-            Context: new MeasurementContext { Arm = MeasurementArm.Left, Note = " rest " });
+            Context: new MeasurementContext { Arm = MeasurementArm.Left, Tag = " rest " });
 
         var reading = await CreateUseCase().ExecuteAsync(request);
 
         reading.Context.Arm.ShouldBe(MeasurementArm.Left);
-        reading.Context.Note.ShouldBe("rest");
+        reading.Context.Tag.ShouldBe("rest");
     }
 
     [Fact]

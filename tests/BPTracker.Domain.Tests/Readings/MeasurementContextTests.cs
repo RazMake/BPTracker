@@ -11,7 +11,7 @@ public sealed class MeasurementContextTests
 
         context.Arm.ShouldBe(MeasurementArm.Unspecified);
         context.Position.ShouldBe(BodyPosition.Unspecified);
-        context.Note.ShouldBeNull();
+        context.Tag.ShouldBeNull();
     }
 
     [Theory]
@@ -19,12 +19,12 @@ public sealed class MeasurementContextTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("\t\n")]
-    public void NormalisedCollapsesBlankNotesToNull(string? note) =>
-        new MeasurementContext { Note = note }.Normalised().Note.ShouldBeNull();
+    public void NormalisedCollapsesBlankTagsToNull(string? tag) =>
+        new MeasurementContext { Tag = tag }.Normalised().Tag.ShouldBeNull();
 
     [Fact]
     public void NormalisedTrimsSurroundingWhitespace() =>
-        new MeasurementContext { Note = "  before breakfast  " }.Normalised().Note
+        new MeasurementContext { Tag = "  before breakfast  " }.Normalised().Tag
             .ShouldBe("before breakfast");
 
     [Fact]
@@ -34,7 +34,7 @@ public sealed class MeasurementContextTests
         {
             Arm = MeasurementArm.Right,
             Position = BodyPosition.Sitting,
-            Note = "ok",
+            Tag = "ok",
         }.Normalised();
 
         context.Arm.ShouldBe(MeasurementArm.Right);
@@ -42,16 +42,29 @@ public sealed class MeasurementContextTests
     }
 
     [Fact]
-    public void NormalisedAcceptsNoteAtTheLengthLimit()
+    public void NormalisedAcceptsTagAtTheLengthLimit()
     {
-        var note = new string('a', MeasurementContext.MaxNoteLength);
-        new MeasurementContext { Note = note }.Normalised().Note.ShouldBe(note);
+        var tag = new string('a', MeasurementContext.MaxTagLength);
+        new MeasurementContext { Tag = tag }.Normalised().Tag.ShouldBe(tag);
     }
 
     [Fact]
-    public void NormalisedRejectsOverlongNote()
+    public void NormalisedRejectsOverlongTag()
     {
-        var note = new string('a', MeasurementContext.MaxNoteLength + 1);
-        Should.Throw<InvalidOperationException>(() => new MeasurementContext { Note = note }.Normalised());
+        var tag = new string('a', MeasurementContext.MaxTagLength + 1);
+        Should.Throw<InvalidOperationException>(() => new MeasurementContext { Tag = tag }.Normalised());
     }
+
+    [Fact]
+    public void ClampShortensATagThatIsTooLong() =>
+        MeasurementContext.Clamp(new string('a', MeasurementContext.MaxTagLength + 50))
+            .ShouldBe(new string('a', MeasurementContext.MaxTagLength));
+
+    [Fact]
+    public void ClampLeavesAnAcceptableTagAlone() =>
+        MeasurementContext.Clamp("after a run").ShouldBe("after a run");
+
+    [Fact]
+    public void ClampLeavesNullAlone() =>
+        MeasurementContext.Clamp(null).ShouldBeNull();
 }

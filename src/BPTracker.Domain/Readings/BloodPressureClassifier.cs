@@ -5,12 +5,6 @@ namespace BPTracker.Domain.Readings;
 /// </summary>
 public static class BloodPressureClassifier
 {
-    /// <summary>Systolic at or above this value is a hypertensive crisis.</summary>
-    private const int CrisisSystolic = 181;
-
-    /// <summary>Diastolic at or above this value is a hypertensive crisis.</summary>
-    private const int CrisisDiastolic = 121;
-
     /// <summary>
     /// Determines the category for the supplied pressures.
     /// </summary>
@@ -23,12 +17,12 @@ public static class BloodPressureClassifier
         var sbp = systolic.MmHg;
         var dbp = diastolic.MmHg;
 
-        if (sbp >= CrisisSystolic || dbp >= CrisisDiastolic)
+        if (sbp >= CrisisThreshold.Systolic || dbp >= CrisisThreshold.Diastolic)
         {
             return BloodPressureCategory.HypertensiveCrisis;
         }
 
-        if (sbp < 90 || dbp < 60)
+        if (sbp < HealthyRange.Systolic.Lowest || dbp < HealthyRange.Diastolic.Lowest)
         {
             return BloodPressureCategory.Hypotension;
         }
@@ -38,12 +32,12 @@ public static class BloodPressureClassifier
             return BloodPressureCategory.HypertensionStage2;
         }
 
-        if (sbp >= 130 || dbp >= 80)
+        if (sbp >= 130 || dbp >= HealthyRange.Diastolic.TooHigh)
         {
             return BloodPressureCategory.HypertensionStage1;
         }
 
-        return sbp >= 120
+        return sbp >= HealthyRange.Systolic.TooHigh
             ? BloodPressureCategory.Elevated
             : BloodPressureCategory.Normal;
     }

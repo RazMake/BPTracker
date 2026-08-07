@@ -1,16 +1,26 @@
 using System.ComponentModel;
+using System.Globalization;
 using BPTracker.Application.Readings;
 using BPTracker.Domain.Readings;
 using BPTracker.Presentation.Readings;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui.Layouts;
 
 namespace BPTracker.Mobile;
 
 public partial class EntryPage : ContentPage
 {
+    private const double PortraitValueFontSize = 76;
+    private const double LandscapeValueFontSize = 52;
+
+    private const string CrisisColour = "#FF2D3E";
+    private const string NormalValueColour = "#E9EEF3";
+
     private readonly ReadingEntryViewModel _viewModel;
     private readonly GetReadingHistoryUseCase _history;
     private readonly IServiceProvider _services;
+
+    private bool? _isLandscape;
 
     public EntryPage(
         ReadingEntryViewModel viewModel,
@@ -70,66 +80,84 @@ public partial class EntryPage : ContentPage
 
     private void UpdateCategory()
     {
-        var category = _viewModel.PreviewCategory;
-        CategoryLabel.Text = category is null ? string.Empty : Describe(category.Value);
-        CategoryLabel.TextColor = Color.FromArgb(ColourFor(category));
+        CategoryLabel.Text = _viewModel.PreviewCategoryName;
+        CategoryLabel.TextColor = Color.FromArgb(ColourFor(_viewModel.PreviewCategory));
+
+        SystolicValue.TextColor = Color.FromArgb(
+            _viewModel.IsSystolicCritical ? CrisisColour : NormalValueColour);
+
+        DiastolicValue.TextColor = Color.FromArgb(
+            _viewModel.IsDiastolicCritical ? CrisisColour : NormalValueColour);
     }
 
-    private void OnSystolicUp(object? sender, EventArgs e) => _viewModel.AdjustSystolic(1);
+    private void OnPageSizeChanged(object? sender, EventArgs e) => ApplyOrientation(Width > Height);
 
-    private void OnSystolicDown(object? sender, EventArgs e) => _viewModel.AdjustSystolic(-1);
-
-    private void OnDiastolicUp(object? sender, EventArgs e) => _viewModel.AdjustDiastolic(1);
-
-    private void OnDiastolicDown(object? sender, EventArgs e) => _viewModel.AdjustDiastolic(-1);
-
-    private void OnSystolicCompleted(object? sender, EventArgs e) => DiastolicEntry.Focus();
-
-    private void OnToggleDetails(object? sender, EventArgs e)
+    // Three panels, laid out down the screen in portrait and across it in landscape.
+    private void ApplyOrientation(bool landscape)
     {
-        DetailsPanel.IsVisible = !DetailsPanel.IsVisible;
-        DetailsToggle.Text = DetailsPanel.IsVisible ? "Hide detail" : "Add detail";
+        if (_isLandscape == landscape)
+        {
+            return;
+        }
+
+        _isLandscape = landscape;
+
+        RootLayout.Direction = landscape ? FlexDirection.Row : FlexDirection.Column;
+        SystolicValue.FontSize = landscape ? LandscapeValueFontSize : PortraitValueFontSize;
+        DiastolicValue.FontSize = SystolicValue.FontSize;
     }
 
-    private void OnArmChanged(object? sender, EventArgs e) =>
-        _viewModel.Arm = ArmPicker.SelectedIndex switch
+    private void OnSystolicPan(object? sender, PanUpdatedEventArgs e)
+    {
+        if (e.StatusType == GestureStatus.Started)
         {
-            1 => MeasurementArm.Left,
-            2 => MeasurementArm.Right,
-            _ => MeasurementArm.Unspecified,
-        };
+            _viewModel.BeginSystolicDrag();
+        }
+        else if (e.StatusType == GestureStatus.Running)
+        {
+            _viewModel.DragSystolic(e.TotalX, e.TotalY);
+        }
+    }
 
-    private void OnPositionChanged(object? sender, EventArgs e) =>
-        _viewModel.Position = PositionPicker.SelectedIndex switch
+    private void OnDiastolicPan(object? sender, PanUpdatedEventArgs e)
+    {
+        if (e.StatusType == GestureStatus.Started)
         {
-            1 => BodyPosition.Sitting,
-            2 => BodyPosition.Standing,
-            3 => BodyPosition.Lying,
-            _ => BodyPosition.Unspecified,
-        };
+            _viewModel.BeginDiastolicDrag();
+        }
+        else if (e.StatusType == GestureStatus.Running)
+        {
+            _viewModel.DragDiastolic(e.TotalX, e.TotalY);
+        }
+    }
+
+    private async void OnSystolicTapped(object? sender, TappedEventArgs e) =>
+        _ = _viewModel.TrySetSystolic(await AskForNumber("Systolic", _viewModel.Systolic));
+
+    private async void OnDiastolicTapped(object? sender, TappedEventArgs e) =>
+        _ = _viewModel.TrySetDiastolic(await AskForNumber("Diastolic", _viewModel.Diastolic));
+
+    private Task<string> AskForNumber(string title, int current) => DisplayPromptAsync(
+        title,
+        "Pressure in mmHg",
+        initialValue: current.ToString(CultureInfo.CurrentCulture),
+        maxLength: 3,
+        keyboard: Keyboard.Numeric);
+
+    private async void OnOpenChart(object? sender, EventArgs e) =>
+        await Navigation.PushAsync(_services.GetRequiredService<ChartPage>());
 
     private async void OnOpenSettings(object? sender, EventArgs e) =>
         await Navigation.PushAsync(_services.GetRequiredService<SettingsPage>());
 
-    private static string Describe(BloodPressureCategory category) => category switch
-    {
-        BloodPressureCategory.Hypotension => "Low",
-        BloodPressureCategory.Normal => "Normal",
-        BloodPressureCategory.Elevated => "Elevated",
-        BloodPressureCategory.HypertensionStage1 => "Stage 1",
-        BloodPressureCategory.HypertensionStage2 => "Stage 2",
-        BloodPressureCategory.HypertensiveCrisis => "Crisis - seek advice",
-        _ => string.Empty,
-    };
-
     private static string ColourFor(BloodPressureCategory? category) => category switch
     {
-        BloodPressureCategory.Hypotension => "#3E8FB0",
-        BloodPressureCategory.Normal => "#2E9E5B",
+        BloodPressureCategory.Hypotension => "#4C8DFF",
+        BloodPressureCategory.Normal => "#3FBF77",
         BloodPressureCategory.Elevated => "#D9A420",
-        BloodPressureCategory.HypertensionStage1 => "#E07A24",
-        BloodPressureCategory.HypertensionStage2 => "#D64545",
-        BloodPressureCategory.HypertensiveCrisis => "#8B1E1E",
-        _ => "#6B7A88",
+        BloodPressureCategory.HypertensionStage1 => "#E8912D",
+        BloodPressureCategory.HypertensionStage2 => "#E5484D",
+        BloodPressureCategory.HypertensiveCrisis => "#FF6B6B",
+        _ => "#8A98A6",
     };
 }

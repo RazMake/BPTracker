@@ -3,14 +3,20 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
         xmlns:trends="clr-namespace:BPTracker.Presentation.Trends;assembly=BPTracker.Presentation"
+        xmlns:local="clr-namespace:BPTracker.Desktop"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         Title="BPTracker"
-        Height="760"
+        Height="860"
         Width="1180"
-        MinHeight="600"
-        MinWidth="920"
+        MinHeight="860"
+        MinWidth="1000"
         Background="{StaticResource SurfaceAlt}"
         WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <local:CategoryNameConverter x:Key="CategoryName" />
+        <local:CriticalBrushConverter x:Key="CriticalBrush" />
+    </Window.Resources>
 
     <Grid Margin="16">
         <Grid.ColumnDefinitions>
@@ -19,7 +25,6 @@
         </Grid.ColumnDefinitions>
 
         <Border Style="{StaticResource Card}" Margin="0,0,16,0">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
                 <TextBlock Text="New reading" Style="{StaticResource Heading}" />
 
@@ -32,6 +37,7 @@
                     <StackPanel Grid.Column="0" HorizontalAlignment="Center">
                         <TextBlock Text="SYSTOLIC" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
                         <TextBox Style="{StaticResource PressureBox}"
+                                 Foreground="{Binding Entry.IsSystolicCritical, Converter={StaticResource CriticalBrush}}"
                                  Text="{Binding Entry.Systolic, UpdateSourceTrigger=PropertyChanged}" />
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
                             <Button Content="-" Style="{StaticResource StepButton}"
@@ -52,6 +58,7 @@
                     <StackPanel Grid.Column="1" HorizontalAlignment="Center">
                         <TextBlock Text="DIASTOLIC" Style="{StaticResource Caption}" HorizontalAlignment="Center" />
                         <TextBox Style="{StaticResource PressureBox}"
+                                 Foreground="{Binding Entry.IsDiastolicCritical, Converter={StaticResource CriticalBrush}}"
                                  Text="{Binding Entry.Diastolic, UpdateSourceTrigger=PropertyChanged}" />
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0">
                             <Button Content="-" Style="{StaticResource StepButton}"
@@ -75,7 +82,7 @@
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"
                            Foreground="{StaticResource Accent}"
-                           Text="{Binding Entry.PreviewCategory}" />
+                           Text="{Binding Entry.PreviewCategoryName}" />
 
                 <TextBlock Text="{Binding Entry.Validation.Message}"
                            Foreground="{StaticResource CategoryStage2}"
@@ -83,23 +90,35 @@
                            Margin="0,6,0,0"
                            HorizontalAlignment="Center" />
 
-                <TextBlock Text="Note" Style="{StaticResource Caption}" Margin="0,16,0,4" />
-                <TextBox Text="{Binding Entry.Note, UpdateSourceTrigger=PropertyChanged}"
-                         MinHeight="52"
-                         TextWrapping="Wrap"
-                         AcceptsReturn="True" />
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="TAG"
+                               Style="{StaticResource Caption}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0" />
+                    <TextBox Grid.Column="1"
+                             Text="{Binding Entry.Tag, UpdateSourceTrigger=PropertyChanged}"
+                             MaxLength="100"
+                             FontSize="12"
+                             ToolTip="Optional. A word or two explaining an unusual reading." />
+                </Grid>
 
                 <Button Content="Save reading"
                         Style="{StaticResource PrimaryButton}"
-                        Margin="0,16,0,0"
+                        Padding="16,6"
+                        Margin="0,14,0,0"
                         Command="{Binding Entry.SaveCommand}" />
 
                 <TextBlock Text="{Binding Entry.StatusMessage}"
                            Style="{StaticResource Caption}"
                            HorizontalAlignment="Center"
-                           Margin="0,8,0,0" />
+                           Margin="0,4,0,0" />
 
-                <Separator Margin="0,20" />
+                <Separator Margin="0,8" />
 
                 <TextBlock Text="DATA FOLDER" Style="{StaticResource Caption}" />
                 <TextBox Text="{Binding Storage.DataFolder, Mode=OneWay}"
@@ -113,7 +132,7 @@
                 <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0" TextWrapping="Wrap"
                            Text="Point your sync tool at this folder. Each device writes its own file." />
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <Button Content="Change..." Padding="8,6" Margin="0,0,8,0" Click="OnChangeDataFolder" />
+                    <Button Content="Change Folder" Padding="8,6" Margin="0,0,8,0" Click="OnChangeDataFolder" />
                     <Button Content="Open folder" Padding="8,6" Click="OnOpenDataFolder" />
                 </StackPanel>
                 <TextBlock Text="{Binding Storage.StatusMessage}"
@@ -121,12 +140,11 @@
                            TextWrapping="Wrap"
                            Margin="0,6,0,0" />
 
-                <Separator Margin="0,20" />
+                <Separator Margin="0,8" />
 
                 <TextBlock x:Name="UpdateStatusText" Style="{StaticResource Caption}" TextWrapping="Wrap" />
                 <Button Content="Check for updates" Margin="0,8,0,0" Padding="8,6" Click="OnCheckForUpdates" />
             </StackPanel>
-            </ScrollViewer>
         </Border>
 
         <Grid Grid.Column="1">
@@ -158,7 +176,7 @@
             </Border>
 
             <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,16">
-                <lvc:CartesianChart x:Name="TrendChart" />
+                <lvc:CartesianChart x:Name="TrendChart" Background="{StaticResource Surface}" />
             </Border>
 
             <Border Grid.Row="2" Style="{StaticResource Card}">
@@ -174,8 +192,9 @@
                                             Binding="{Binding MeasuredAt, StringFormat=g}" />
                         <DataGridTextColumn Header="Systolic" Width="90" Binding="{Binding Systolic.MmHg}" />
                         <DataGridTextColumn Header="Diastolic" Width="90" Binding="{Binding Diastolic.MmHg}" />
-                        <DataGridTextColumn Header="Category" Width="180" Binding="{Binding Category}" />
-                        <DataGridTextColumn Header="Note" Width="*" Binding="{Binding Context.Note}" />
+                        <DataGridTextColumn Header="Category" Width="180"
+                                            Binding="{Binding Category, Converter={StaticResource CategoryName}}" />
+                        <DataGridTextColumn Header="Tag" Width="*" Binding="{Binding Context.Tag}" />
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>

@@ -12,6 +12,10 @@ public partial class App : Microsoft.Maui.Controls.Application
     {
         _services = services;
         InitializeComponent();
+
+        // Dark only, and set here rather than left to the system so Android's own dialogs,
+        // pickers and keyboards follow the app instead of the phone's day/night setting.
+        UserAppTheme = AppTheme.Dark;
     }
 
     protected override Window CreateWindow(IActivationState? activationState) =>

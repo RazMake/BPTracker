@@ -28,7 +28,16 @@ Readable on purpose. The user can open it in a text editor.
   incomplete line, so this is expected, not exceptional.
 - Implausible values are rejected at parse time, so a hand-edited file cannot inject a bad reading.
 - Unknown enum values fall back to `Unspecified` rather than failing the line.
+- An over-length tag is **clamped, not rejected**. The limit shrank from 500 to 100 when the note
+  became a tag, and an old journal must still load.
 - A journal locked by the sync tool is skipped; the next read picks it up.
+
+## Field names on disk
+
+The DTO in `ReadingLineSerializer` is the wire format, and its names are frozen independently of
+the domain. In particular the tag is still written as **`Note`**, because journals already exist
+with that name and a device may never rewrite another device's file. Renaming it on disk would be
+a format migration and needs an ADR.
 
 ## Where the folder lives
 

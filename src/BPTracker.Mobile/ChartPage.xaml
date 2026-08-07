@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="BPTracker.Mobile.ChartPage"
+             Title="History">
+
+    <Grid RowDefinitions="Auto, *, Auto" Padding="8,4"
+          BackgroundColor="{StaticResource Background}">
+
+        <FlexLayout Grid.Row="0" Wrap="Wrap" JustifyContent="Center" AlignItems="Center" Padding="0,4">
+            <BoxView WidthRequest="16" HeightRequest="4" CornerRadius="2"
+                     Color="{StaticResource SeriesSystolic}" Margin="4,0" />
+            <Label Text="SYSTOLIC" Style="{StaticResource CaptionLabel}" Margin="0,0,12,0" />
+            <BoxView WidthRequest="16" HeightRequest="4" CornerRadius="2"
+                     Color="{StaticResource SeriesDiastolic}" Margin="4,0" />
+            <Label Text="DIASTOLIC" Style="{StaticResource CaptionLabel}" Margin="0,0,12,0" />
+            <BoxView WidthRequest="10" HeightRequest="10" CornerRadius="5"
+                     Color="{StaticResource Tagged}" Margin="4,0" />
+            <Label Text="TAGGED" Style="{StaticResource CaptionLabel}" Margin="0,0,12,0" />
+            <Label Text="RED IS A CRISIS" Style="{StaticResource CaptionLabel}" />
+        </FlexLayout>
+
+        <GraphicsView Grid.Row="1"
+                      x:Name="Plot"
+                      SizeChanged="OnPlotSizeChanged"
+                      StartInteraction="OnTouchStart"
+                      DragInteraction="OnTouchDrag"
+                      EndInteraction="OnTouchEnd"
+                      CancelInteraction="OnTouchCancel" />
+
+        <Label Grid.Row="1"
+               x:Name="EmptyLabel"
+               Text="No measurements yet."
+               TextColor="{StaticResource TextMuted}"
+               IsVisible="False"
+               HorizontalOptions="Center"
+               VerticalOptions="Center" />
+
+        <Label Grid.Row="2"
+               Text="DRAG THE TOP TO SCROLL, HOLD THE BOTTOM TO READ"
+               Style="{StaticResource CaptionLabel}"
+               HorizontalTextAlignment="Center"
+               HorizontalOptions="Center"
+               Padding="0,6" />
+    </Grid>
+</ContentPage>

@@ -56,7 +56,9 @@ public partial class MainWindow : Window
 
     private void RedrawChart()
     {
+        TrendChartBuilder.ApplyTheme(TrendChart);
         TrendChart.Series = TrendChartBuilder.BuildSeries(_dashboard.Trend);
+        TrendChart.Sections = TrendChartBuilder.BuildSections();
         TrendChart.XAxes = TrendChartBuilder.BuildXAxes(_dashboard.Trend);
         TrendChart.YAxes = TrendChartBuilder.BuildYAxes();
     }

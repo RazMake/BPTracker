@@ -20,8 +20,9 @@
   </ItemGroup>
 
   <ItemGroup Label="UI">
+    <!-- The phone chart is drawn with MAUI's own GraphicsView, so there is no MAUI charting
+         package here on purpose. See memory-bank/decisions/ADR-0003-phone-chart.md. -->
     <PackageVersion Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.5" />
-    <PackageVersion Include="LiveChartsCore.SkiaSharpView.Maui" Version="2.0.5" />
     <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.90" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
   </ItemGroup>

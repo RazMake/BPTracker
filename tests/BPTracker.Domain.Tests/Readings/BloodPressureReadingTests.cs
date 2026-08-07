@@ -68,11 +68,11 @@ public sealed class BloodPressureReadingTests
         var later = TestClock.DefaultNow.AddHours(1);
 
         var updated = reading.WithContext(
-            new MeasurementContext { Arm = MeasurementArm.Left, Note = "  after walk  " },
+            new MeasurementContext { Arm = MeasurementArm.Left, Tag = "  after walk  " },
             later);
 
         updated.Context.Arm.ShouldBe(MeasurementArm.Left);
-        updated.Context.Note.ShouldBe("after walk");
+        updated.Context.Tag.ShouldBe("after walk");
         updated.UpdatedAtUtc.ShouldBe(later);
         updated.Id.ShouldBe(reading.Id);
     }

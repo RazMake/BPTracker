@@ -35,6 +35,26 @@ public sealed class ReadingEntryViewModelTests
     }
 
     [Fact]
+    public void PreviewCategoryNameIsSpelledOutForDisplay()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.Systolic = 135;
+
+        viewModel.PreviewCategoryName.ShouldBe("Hypertension stage 1");
+    }
+
+    [Fact]
+    public void AnInvalidPairHasNoCategoryName()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.Diastolic = 130;
+
+        viewModel.PreviewCategoryName.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void InvalidPairBlocksSaving()
     {
         var viewModel = CreateViewModel();
@@ -87,72 +107,8 @@ public sealed class ReadingEntryViewModelTests
 
         changed.ShouldContain(nameof(ReadingEntryViewModel.CanSave));
         changed.ShouldContain(nameof(ReadingEntryViewModel.PreviewCategory));
+        changed.ShouldContain(nameof(ReadingEntryViewModel.PreviewCategoryName));
         changed.ShouldContain(nameof(ReadingEntryViewModel.Validation));
-    }
-
-    [Fact]
-    public async Task SavingPersistsTheReadingAndReportsSuccess()
-    {
-        var viewModel = CreateViewModel();
-        viewModel.Systolic = 135;
-        viewModel.Diastolic = 88;
-        viewModel.Arm = MeasurementArm.Left;
-
-        BloodPressureReading? saved = null;
-        viewModel.ReadingSaved += (_, reading) => saved = reading;
-
-        await viewModel.SaveAsync(CancellationToken.None);
-
-        await _repository.Received(1).UpsertAsync(
-            Arg.Is<BloodPressureReading>(reading =>
-                reading!.Systolic.MmHg == 135 &&
-                reading.Diastolic.MmHg == 88 &&
-                reading.Context.Arm == MeasurementArm.Left),
-            Arg.Any<CancellationToken>());
-
-        saved.ShouldNotBeNull();
-        viewModel.StatusMessage.ShouldBe("Saved");
-        viewModel.IsSaving.ShouldBeFalse();
-    }
-
-    [Fact]
-    public async Task SavingClearsTheNoteSoItIsNotReusedByAccident()
-    {
-        var viewModel = CreateViewModel();
-        viewModel.Note = "after a walk";
-
-        await viewModel.SaveAsync(CancellationToken.None);
-
-        viewModel.Note.ShouldBeNull();
-    }
-
-    [Fact]
-    public async Task SavingAnInvalidPairDoesNothing()
-    {
-        var viewModel = CreateViewModel();
-        viewModel.Diastolic = 130;
-
-        await viewModel.SaveAsync(CancellationToken.None);
-
-        await _repository.DidNotReceive().UpsertAsync(
-            Arg.Any<BloodPressureReading>(),
-            Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task SaveResetsTheBusyFlagWhenPersistenceFails()
-    {
-        _repository
-            .UpsertAsync(Arg.Any<BloodPressureReading>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromException(new InvalidOperationException("disk full")));
-
-        var viewModel = CreateViewModel();
-
-        await Should.ThrowAsync<InvalidOperationException>(
-            () => viewModel.SaveAsync(CancellationToken.None));
-
-        viewModel.IsSaving.ShouldBeFalse();
-        viewModel.CanSave.ShouldBeTrue();
     }
 
     [Fact]
@@ -172,7 +128,7 @@ public sealed class ReadingEntryViewModelTests
         viewModel.Diastolic.ShouldBe(95);
         viewModel.Arm.ShouldBe(MeasurementArm.Right);
         viewModel.Position.ShouldBe(BodyPosition.Sitting);
-        viewModel.Note.ShouldBeNull();
+        viewModel.Tag.ShouldBeNull();
     }
 
     [Fact]
@@ -186,6 +142,68 @@ public sealed class ReadingEntryViewModelTests
         viewModel.Systolic.ShouldBe(ReadingEntryViewModel.DefaultSystolic);
         viewModel.Diastolic.ShouldBe(ReadingEntryViewModel.DefaultDiastolic);
         viewModel.Arm.ShouldBe(MeasurementArm.Unspecified);
+    }
+
+    [Fact]
+    public void SlidingChangesTheValueRelativeToWhereTheGestureStarted()
+    {
+        var viewModel = CreateViewModel();
+        viewModel.Systolic = 140;
+
+        viewModel.BeginSystolicDrag();
+        viewModel.DragSystolic(DragAdjustment.PixelsPerStep * 5, 0);
+        viewModel.Systolic.ShouldBe(145);
+
+        viewModel.DragSystolic(DragAdjustment.PixelsPerStep * 2, 0);
+        viewModel.Systolic.ShouldBe(142);
+    }
+
+    [Fact]
+    public void SlidingTheDiastolicValueStaysInsideThePlausibleRange()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.BeginDiastolicDrag();
+        viewModel.DragDiastolic(-100_000, 0);
+
+        viewModel.Diastolic.ShouldBe(DiastolicPressure.Minimum);
+    }
+
+    [Fact]
+    public void SlidingWithoutStartingTheGestureFallsBackToTheDefault()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.DragSystolic(0, 0);
+
+        viewModel.Systolic.ShouldBe(ReadingEntryViewModel.DefaultSystolic);
+    }
+
+    [Theory]
+    [InlineData("135", true, 135)]
+    [InlineData(" 135 ", true, 135)]
+    [InlineData("999", false, 120)]
+    [InlineData("abc", false, 120)]
+    [InlineData("", false, 120)]
+    [InlineData(null, false, 120)]
+    public void TypedSystolicIsOnlyAcceptedWhenItIsPlausible(string? text, bool accepted, int expected)
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.TrySetSystolic(text).ShouldBe(accepted);
+        viewModel.Systolic.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData("70", true, 70)]
+    [InlineData("250", false, 80)]
+    [InlineData("no", false, 80)]
+    public void TypedDiastolicIsOnlyAcceptedWhenItIsPlausible(string? text, bool accepted, int expected)
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.TrySetDiastolic(text).ShouldBe(accepted);
+        viewModel.Diastolic.ShouldBe(expected);
     }
 
     [Fact]

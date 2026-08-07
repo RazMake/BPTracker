@@ -53,12 +53,12 @@ public sealed class JournalReadingRepositoryTests
         await repository.UpsertAsync(original);
 
         var edited = original.WithContext(
-            new MeasurementContext { Note = "corrected" },
+            new MeasurementContext { Tag = "corrected" },
             TestClock.DefaultNow.AddMinutes(10));
         await repository.UpsertAsync(edited);
 
         (await File.ReadAllLinesAsync(fixture.Location.DeviceJournalPath)).Length.ShouldBe(2);
-        (await repository.FindAsync(original.Id)).ShouldNotBeNull().Context.Note.ShouldBe("corrected");
+        (await repository.FindAsync(original.Id)).ShouldNotBeNull().Context.Tag.ShouldBe("corrected");
     }
 
     [Fact]
@@ -98,12 +98,12 @@ public sealed class JournalReadingRepositoryTests
         await repository.UpsertAsync(mine);
 
         var theirEdit = mine.WithContext(
-            new MeasurementContext { Note = "edited on the phone" },
+            new MeasurementContext { Tag = "edited on the phone" },
             TestClock.DefaultNow.AddHours(1));
         fixture.WriteForeignJournal("phone01", ReadingLineSerializer.ToLine(theirEdit));
 
         (await repository.FindAsync(mine.Id)).ShouldNotBeNull()
-            .Context.Note.ShouldBe("edited on the phone");
+            .Context.Tag.ShouldBe("edited on the phone");
     }
 
     [Fact]
@@ -116,11 +116,11 @@ public sealed class JournalReadingRepositoryTests
         await repository.UpsertAsync(current);
 
         var stale = current.WithContext(
-            new MeasurementContext { Note = "older" },
+            new MeasurementContext { Tag = "older" },
             TestClock.DefaultNow);
         fixture.WriteForeignJournal("phone01", ReadingLineSerializer.ToLine(stale));
 
-        (await repository.FindAsync(current.Id)).ShouldNotBeNull().Context.Note.ShouldBeNull();
+        (await repository.FindAsync(current.Id)).ShouldNotBeNull().Context.Tag.ShouldBeNull();
     }
 
     [Fact]

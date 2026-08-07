@@ -26,7 +26,18 @@ public static class TrendCalculator
                 group.Key,
                 group.Average(reading => (double)reading.Systolic.MmHg),
                 group.Average(reading => (double)reading.Diastolic.MmHg),
-                group.Count()))];
+                group.Count(),
+                JoinTags(group)))];
+    }
+
+    private static string? JoinTags(IEnumerable<BloodPressureReading> readings)
+    {
+        var tags = readings
+            .Select(reading => reading.Context.Tag)
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .ToArray();
+
+        return tags.Length == 0 ? null : string.Join("; ", tags);
     }
 
     /// <summary>
