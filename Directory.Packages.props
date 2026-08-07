@@ -23,7 +23,7 @@
     <PackageVersion Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.5" />
     <PackageVersion Include="LiveChartsCore.SkiaSharpView.Maui" Version="2.0.5" />
     <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.90" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup Label="Desktop update">
