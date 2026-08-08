@@ -1,73 +1,41 @@
 using System.Globalization;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using BPTracker.Domain.Readings;
 
 namespace BPTracker.Infrastructure.Storage;
-
-/// <summary>
-/// One reading as it appears on a single line of a journal file.
-/// </summary>
-/// <remarks>
-/// Property names are short but readable, because the user can open this file in a text editor.
-/// </remarks>
-public sealed record ReadingLine
-{
-    /// <summary>Reading identity.</summary>
-    public Guid Id { get; init; }
-
-    /// <summary>Systolic pressure in mmHg.</summary>
-    public int Systolic { get; init; }
-
-    /// <summary>Diastolic pressure in mmHg.</summary>
-    public int Diastolic { get; init; }
-
-    /// <summary>When it was measured, ISO-8601 with the original offset.</summary>
-    public string MeasuredAt { get; init; } = string.Empty;
-
-    /// <summary>Arm the cuff was on.</summary>
-    public string Arm { get; init; } = nameof(MeasurementArm.Unspecified);
-
-    /// <summary>Posture during measurement.</summary>
-    public string Position { get; init; } = nameof(BodyPosition.Unspecified);
-
-    /// <summary>Optional short tag.</summary>
-    /// <remarks>
-    /// Still called <c>Note</c> on disk. The domain renamed it to <c>Tag</c>, but journals already
-    /// written by either app use this name, and a device must never rewrite another device's file.
-    /// </remarks>
-    public string? Note { get; init; }
-
-    /// <summary>When the record last changed, ISO-8601 UTC. Drives last-writer-wins.</summary>
-    public string UpdatedAt { get; init; } = string.Empty;
-
-    /// <summary>Whether the reading was retracted.</summary>
-    public bool Deleted { get; init; }
-}
-
-[JsonSerializable(typeof(ReadingLine))]
-[JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
-internal sealed partial class ReadingJsonContext : JsonSerializerContext;
 
 /// <summary>
 /// Converts between <see cref="BloodPressureReading"/> and a journal line.
 /// </summary>
 public static class ReadingLineSerializer
 {
+    /// <summary>Time used when a line carries a date but no time.</summary>
+    /// <remarks>
+    /// A reading with no time is almost always the morning one, so guessing is more useful than
+    /// dropping the line.
+    /// </remarks>
+    public const string DefaultTime = "07:30";
+
+    private const string DateFormat = "yyyy-MM-dd";
+    private const string TimeFormat = "HH:mm";
+
     /// <summary>Renders a reading as a single JSON line, with no trailing newline.</summary>
     public static string ToLine(BloodPressureReading reading)
     {
         ArgumentNullException.ThrowIfNull(reading);
 
+        // The wall clock the user saw, not the stored offset: a date and a time cannot carry an
+        // offset, so a reading round-trips against this device's own zone.
+        var local = reading.MeasuredAt.LocalDateTime;
+
         var line = new ReadingLine
         {
+            Date = local.ToString(DateFormat, CultureInfo.InvariantCulture),
+            Time = local.ToString(TimeFormat, CultureInfo.InvariantCulture),
+            Sys = reading.Systolic.MmHg,
+            Dia = reading.Diastolic.MmHg,
+            Tag = reading.Context.Tag,
             Id = reading.Id,
-            Systolic = reading.Systolic.MmHg,
-            Diastolic = reading.Diastolic.MmHg,
-            MeasuredAt = reading.MeasuredAt.ToString("O", CultureInfo.InvariantCulture),
-            Arm = reading.Context.Arm.ToString(),
-            Position = reading.Context.Position.ToString(),
-            Note = reading.Context.Tag,
             UpdatedAt = reading.UpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             Deleted = reading.IsDeleted,
         };
@@ -76,7 +44,7 @@ public static class ReadingLineSerializer
     }
 
     /// <summary>
-    /// Parses a journal line.
+    /// Parses a journal line, in either the current shape or the one written before it.
     /// </summary>
     /// <returns>
     /// <see langword="false"/> for a blank, malformed or implausible line. A partially synced file
@@ -94,42 +62,15 @@ public static class ReadingLineSerializer
         try
         {
             var parsed = JsonSerializer.Deserialize(line, ReadingJsonContext.Default.ReadingLine);
-            if (parsed is null || parsed.Id == Guid.Empty)
+            if (parsed is null)
             {
                 return false;
             }
 
-            if (!SystolicPressure.TryFrom(parsed.Systolic, out var systolic) ||
-                !DiastolicPressure.TryFrom(parsed.Diastolic, out var diastolic) ||
-                systolic.MmHg <= diastolic.MmHg)
-            {
-                return false;
-            }
-
-            if (!TryParseInstant(parsed.MeasuredAt, out var measuredAt) ||
-                !TryParseInstant(parsed.UpdatedAt, out var updatedAt))
-            {
-                return false;
-            }
-
-            var restored = BloodPressureReading.Create(
-                systolic,
-                diastolic,
-                measuredAt,
-                updatedAt,
-                new MeasurementContext
-                {
-                    Arm = ParseEnum(parsed.Arm, MeasurementArm.Unspecified),
-                    Position = ParseEnum(parsed.Position, BodyPosition.Unspecified),
-
-                    // Clamped rather than validated: a journal written before the limit shrank
-                    // must still load, and Create rejects an over-length tag outright.
-                    Tag = MeasurementContext.Clamp(parsed.Note),
-                },
-                parsed.Id);
-
-            reading = parsed.Deleted ? restored.Retract(updatedAt) : restored;
-            return true;
+            // A legacy line has no Date, so it arrives here empty rather than wrong.
+            return string.IsNullOrEmpty(parsed.Date)
+                ? TryParseLegacy(line, out reading)
+                : TryBuild(parsed, out reading);
         }
         catch (JsonException)
         {
@@ -137,14 +78,87 @@ public static class ReadingLineSerializer
         }
     }
 
-    private static bool TryParseInstant(string value, out DateTimeOffset instant) =>
+    private static bool TryParseLegacy(string line, out BloodPressureReading reading)
+    {
+        reading = null!;
+
+        var parsed = JsonSerializer.Deserialize(line, LegacyReadingJsonContext.Default.LegacyReadingLine);
+
+        return parsed is not null
+            && TryParseInstant(parsed.MeasuredAt, out var measuredAt)
+            && TryBuild(Reshape(parsed, measuredAt), out reading);
+    }
+
+    private static ReadingLine Reshape(LegacyReadingLine parsed, DateTimeOffset measuredAt)
+    {
+        var local = measuredAt.LocalDateTime;
+
+        return new ReadingLine
+        {
+            Date = local.ToString(DateFormat, CultureInfo.InvariantCulture),
+            Time = local.ToString(TimeFormat, CultureInfo.InvariantCulture),
+            Sys = parsed.Systolic,
+            Dia = parsed.Diastolic,
+            Tag = parsed.Note,
+            Id = parsed.Id,
+            UpdatedAt = parsed.UpdatedAt,
+            Deleted = parsed.Deleted,
+        };
+    }
+
+    private static bool TryBuild(ReadingLine parsed, out BloodPressureReading reading)
+    {
+        reading = null!;
+
+        if (parsed.Id == Guid.Empty ||
+            !SystolicPressure.TryFrom(parsed.Sys, out var systolic) ||
+            !DiastolicPressure.TryFrom(parsed.Dia, out var diastolic) ||
+            systolic.MmHg <= diastolic.MmHg ||
+            !TryParseMeasuredAt(parsed.Date, parsed.Time, out var measuredAt) ||
+            !TryParseInstant(parsed.UpdatedAt, out var updatedAt))
+        {
+            return false;
+        }
+
+        var restored = BloodPressureReading.Create(
+            systolic,
+            diastolic,
+            measuredAt,
+            updatedAt,
+
+            // Clamped rather than validated: a journal written before the limit shrank must still
+            // load, and Create rejects an over-length tag outright.
+            new MeasurementContext { Tag = MeasurementContext.Clamp(parsed.Tag) },
+            parsed.Id);
+
+        reading = parsed.Deleted ? restored.Retract(updatedAt) : restored;
+        return true;
+    }
+
+    private static bool TryParseMeasuredAt(string? date, string? time, out DateTimeOffset measuredAt)
+    {
+        measuredAt = default;
+
+        if (!DateOnly.TryParseExact(date, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
+        {
+            return false;
+        }
+
+        var text = string.IsNullOrWhiteSpace(time) ? DefaultTime : time.Trim();
+        if (!TimeOnly.TryParseExact(text, TimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var clock))
+        {
+            return false;
+        }
+
+        var local = day.ToDateTime(clock, DateTimeKind.Unspecified);
+        measuredAt = new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
+        return true;
+    }
+
+    private static bool TryParseInstant(string? value, out DateTimeOffset instant) =>
         DateTimeOffset.TryParse(
             value,
             CultureInfo.InvariantCulture,
             DateTimeStyles.RoundtripKind,
             out instant);
-
-    private static TEnum ParseEnum<TEnum>(string value, TEnum fallback)
-        where TEnum : struct =>
-        Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed) ? parsed : fallback;
 }

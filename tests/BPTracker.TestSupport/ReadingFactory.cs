@@ -13,13 +13,14 @@ public static class ReadingFactory
         int diastolic = 80,
         DateTimeOffset? measuredAt = null,
         DateTimeOffset? updatedAtUtc = null,
-        Guid? id = null) =>
+        Guid? id = null,
+        string? tag = null) =>
         BloodPressureReading.Create(
             SystolicPressure.From(systolic),
             DiastolicPressure.From(diastolic),
             measuredAt ?? TestClock.DefaultNow,
             updatedAtUtc ?? TestClock.DefaultNow,
-            MeasurementContext.None,
+            new MeasurementContext { Tag = tag },
             id);
 
     /// <summary>Creates a run of readings, one per day, ending at <see cref="TestClock.DefaultNow"/>.</summary>

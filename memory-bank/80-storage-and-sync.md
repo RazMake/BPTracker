@@ -22,22 +22,36 @@ same id; the highest `UpdatedAt` wins when the folder is loaded.
 
 Readable on purpose. The user can open it in a text editor.
 
+```json
+{"Date":"2026-05-04","Time":"09:15","Sys":128,"Dia":82,"Tag":"after coffee","Id":"...","UpdatedAt":"...","Deleted":false}
+```
+
 ## Robustness rules
 
 - A line that will not parse is **skipped, never thrown**. A file copied mid-sync ends with an
   incomplete line, so this is expected, not exceptional.
 - Implausible values are rejected at parse time, so a hand-edited file cannot inject a bad reading.
-- Unknown enum values fall back to `Unspecified` rather than failing the line.
+- A blank `Time` reads as **07:30**, rather than failing the line.
 - An over-length tag is **clamped, not rejected**. The limit shrank from 500 to 100 when the note
   became a tag, and an old journal must still load.
 - A journal locked by the sync tool is skipped; the next read picks it up.
 
 ## Field names on disk
 
-The DTO in `ReadingLineSerializer` is the wire format, and its names are frozen independently of
-the domain. In particular the tag is still written as **`Note`**, because journals already exist
-with that name and a device may never rewrite another device's file. Renaming it on disk would be
-a format migration and needs an ADR.
+`Date`, `Time`, `Sys`, `Dia`, `Tag`, then `Id`, `UpdatedAt`, `Deleted`. The first five are the
+reading; the last three are what makes merging and retraction work. `Arm` and `Position` are no
+longer written. See [ADR-0005](decisions/ADR-0005-journal-line-shape.md) for why, and for what is
+given up: seconds, and the original UTC offset.
+
+`ReadingLineSerializer` also reads the older shape (`Systolic`/`Diastolic`/`MeasuredAt`/`Note`), so
+a folder that has not been fully migrated still loads.
+
+## Migration
+
+`JournalMigration` is the only code that replaces a journal instead of appending to it, and it runs
+against **this device's own file only**. It stages the rewrite beside the journal and moves it into
+place, so an interrupted migration leaves the original intact. Another device's journal is read in
+whatever shape it arrives in and never rewritten.
 
 ## Where the folder lives
 
@@ -64,4 +78,5 @@ On Android 11+ scoped storage, `Documents` is not writable without all-files acc
 
 ## Compaction
 
-Not implemented. When it is: a device may compact **only its own journal**, never another's.
+Not implemented. When it is: a device may compact **only its own journal**, never another's - the
+same rule the format migration follows.

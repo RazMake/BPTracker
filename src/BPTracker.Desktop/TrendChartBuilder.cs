@@ -54,7 +54,7 @@ internal static class TrendChartBuilder
         chart.LegendTextSize = 12;
     }
 
-    internal static ISeries[] BuildSeries(TrendViewModel trend, BloodPressureReading? highlighted = null)
+    internal static ISeries[] BuildSeries(TrendViewModel trend, params ISeries[] selectionMarkers)
     {
         var samples = trend.ChartSamples.ToArray();
 
@@ -86,7 +86,7 @@ internal static class TrendChartBuilder
             .. CrisisOverlays("Systolic crisis", samples, point => point.Systolic, CrisisThreshold.Systolic),
             .. CrisisOverlays("Diastolic crisis", samples, point => point.Diastolic, CrisisThreshold.Diastolic),
             TagMarkers(samples),
-            .. SelectionMarkers(highlighted),
+            .. selectionMarkers,
         ];
     }
 
@@ -238,25 +238,14 @@ internal static class TrendChartBuilder
             YToolTipLabelFormatter = point => point.Model?.Tag ?? string.Empty,
         };
 
-    // Rings drawn around the systolic and diastolic points of whichever reading the user clicked
-    // in the history table. Empty when nothing is selected, or when the selected reading falls
-    // outside the chart's current period.
-    private static IEnumerable<LineSeries<DateTimePoint>> SelectionMarkers(BloodPressureReading? highlighted)
-    {
-        if (highlighted is null)
-        {
-            yield break;
-        }
-
-        yield return SelectionMarker("Selected systolic", highlighted.MeasuredAt, highlighted.Systolic.MmHg);
-        yield return SelectionMarker("Selected diastolic", highlighted.MeasuredAt, highlighted.Diastolic.MmHg);
-    }
-
-    private static LineSeries<DateTimePoint> SelectionMarker(string name, DateTimeOffset measuredAt, double value) =>
+    // A ring drawn around one point of whichever reading the user clicked in the history table.
+    // The instance is long lived and moved by MoveSelectionMarker, so selecting a row never
+    // replaces the series collection - replacing it would restart every entrance animation.
+    internal static LineSeries<DateTimePoint> BuildSelectionMarker(string name) =>
         new()
         {
             Name = name,
-            Values = [DateTimePointFor(measuredAt, value)],
+            Values = [],
             Stroke = null,
             GeometryStroke = new SolidColorPaint(SelectionColour) { StrokeThickness = 3 },
             GeometryFill = new SolidColorPaint(SKColors.Transparent),
@@ -265,6 +254,15 @@ internal static class TrendChartBuilder
             IsVisibleAtLegend = false,
             IsHoverable = false,
         };
+
+    /// <summary>Points a marker at one reading, or hides it when nothing is selected.</summary>
+    internal static void MoveSelectionMarker(
+        LineSeries<DateTimePoint> marker,
+        BloodPressureReading? highlighted,
+        Func<BloodPressureReading, double> value) =>
+        marker.Values = highlighted is null
+            ? []
+            : [DateTimePointFor(highlighted.MeasuredAt, value(highlighted))];
 
     private static DateTimePoint DateTimePointFor(DateTimeOffset measuredAt, double value) => new()
     {

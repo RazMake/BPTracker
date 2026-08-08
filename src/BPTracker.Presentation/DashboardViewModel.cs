@@ -1,5 +1,6 @@
 using BPTracker.Application.Readings;
 using BPTracker.Application.Trends;
+using BPTracker.Presentation.Export;
 using BPTracker.Presentation.Readings;
 using BPTracker.Presentation.Storage;
 using BPTracker.Presentation.Trends;
@@ -23,12 +24,14 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
         ReadingEntryViewModel entry,
         HistoryViewModel history,
         TrendViewModel trend,
-        StorageLocationViewModel storage)
+        StorageLocationViewModel storage,
+        ExportViewModel export)
     {
         Entry = entry ?? throw new ArgumentNullException(nameof(entry));
         History = history ?? throw new ArgumentNullException(nameof(history));
         Trend = trend ?? throw new ArgumentNullException(nameof(trend));
         Storage = storage ?? throw new ArgumentNullException(nameof(storage));
+        Export = export ?? throw new ArgumentNullException(nameof(export));
 
         Entry.ReadingSaved += OnReadingSaved;
         Storage.Changed += OnStorageChanged;
@@ -45,6 +48,9 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
 
     /// <summary>Where readings are stored, shown to the user and changeable.</summary>
     public StorageLocationViewModel Storage { get; }
+
+    /// <summary>Saving the readings out as CSV or as a picture.</summary>
+    public ExportViewModel Export { get; }
 
     /// <summary>Loads the initial data and seeds the entry fields from the latest reading.</summary>
     [RelayCommand]

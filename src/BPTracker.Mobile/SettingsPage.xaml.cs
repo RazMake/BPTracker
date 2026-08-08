@@ -1,3 +1,4 @@
+using BPTracker.Presentation.Export;
 using BPTracker.Presentation.Storage;
 
 namespace BPTracker.Mobile;
@@ -5,12 +6,37 @@ namespace BPTracker.Mobile;
 public partial class SettingsPage : ContentPage
 {
     private readonly StorageLocationViewModel _viewModel;
+    private readonly ExportViewModel _export;
 
-    public SettingsPage(StorageLocationViewModel viewModel)
+    public SettingsPage(StorageLocationViewModel viewModel, ExportViewModel export)
     {
         _viewModel = viewModel;
+        _export = export;
         InitializeComponent();
         BindingContext = _viewModel;
+    }
+
+    private async void OnExportCsv(object? sender, EventArgs e) =>
+        await RunExportAsync(_export.ExportCsvAsync);
+
+    private async void OnExportChart(object? sender, EventArgs e) =>
+        await RunExportAsync(_export.ExportChartAsync);
+
+    private async void OnExportData(object? sender, EventArgs e) =>
+        await RunExportAsync(_export.ExportDataAsync);
+
+    private async Task RunExportAsync(Func<CancellationToken, Task> export)
+    {
+        ExportStatusLabel.Text = "Exporting...";
+        try
+        {
+            await export(CancellationToken.None);
+            ExportStatusLabel.Text = _export.StatusMessage;
+        }
+        catch (Exception exception)
+        {
+            ExportStatusLabel.Text = $"Export failed: {exception.Message}";
+        }
     }
 
     private async void OnChangeFolder(object? sender, EventArgs e)

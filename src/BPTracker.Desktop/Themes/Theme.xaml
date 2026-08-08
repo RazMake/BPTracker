@@ -61,6 +61,15 @@
         <Setter Property="AlternatingRowBackground" Value="{StaticResource SurfaceAlt}" />
         <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource Line}" />
         <Setter Property="VerticalGridLinesBrush" Value="{StaticResource Line}" />
+        <!-- The stock templates paint a selected row with the system highlight, and with the
+             near-white inactive highlight once the grid loses focus, which hides the light cell
+             text. Both states get the same dark tint so a selection survives losing focus. -->
+        <Style.Resources>
+            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#22344A" />
+            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#E9EEF3" />
+            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#22344A" />
+            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#E9EEF3" />
+        </Style.Resources>
     </Style>
 
     <Style TargetType="DataGridColumnHeader">

@@ -4,6 +4,7 @@ using BPTracker.Application.Trends;
 using BPTracker.Infrastructure.Storage;
 using BPTracker.Infrastructure.Time;
 using BPTracker.Presentation;
+using BPTracker.Presentation.Export;
 using BPTracker.Presentation.Readings;
 using BPTracker.Presentation.Storage;
 using BPTracker.Presentation.Trends;
@@ -35,6 +36,9 @@ public static class DesktopServices
         services.AddTransient<HistoryViewModel>();
         services.AddTransient<TrendViewModel>();
         services.AddTransient<StorageLocationViewModel>();
+        services.AddSingleton<DesktopExportRenderer>();
+        services.AddSingleton<IExportRenderer>(provider => provider.GetRequiredService<DesktopExportRenderer>());
+        services.AddSingleton<ExportViewModel>();
         services.AddSingleton<DashboardViewModel>();
 
         services.AddTransient<MainWindow>();

@@ -1,3 +1,4 @@
+using System.Globalization;
 using BPTracker.Domain.Readings;
 using BPTracker.Infrastructure.Storage;
 using BPTracker.TestSupport;
@@ -15,12 +16,7 @@ public sealed class ReadingLineSerializerTests
             DiastolicPressure.From(87),
             measuredAt,
             TestClock.DefaultNow,
-            new MeasurementContext
-            {
-                Arm = MeasurementArm.Right,
-                Position = BodyPosition.Sitting,
-                Tag = "after coffee",
-            });
+            new MeasurementContext { Tag = "after coffee" });
 
         ReadingLineSerializer.TryParse(ReadingLineSerializer.ToLine(original), out var parsed)
             .ShouldBeTrue();
@@ -28,23 +24,44 @@ public sealed class ReadingLineSerializerTests
         parsed.Id.ShouldBe(original.Id);
         parsed.Systolic.MmHg.ShouldBe(134);
         parsed.Diastolic.MmHg.ShouldBe(87);
-        parsed.Context.Arm.ShouldBe(MeasurementArm.Right);
-        parsed.Context.Position.ShouldBe(BodyPosition.Sitting);
         parsed.Context.Tag.ShouldBe("after coffee");
         parsed.UpdatedAtUtc.ShouldBe(original.UpdatedAtUtc);
         parsed.IsDeleted.ShouldBeFalse();
     }
 
     [Fact]
-    public void RoundTripPreservesTheOriginalOffset()
+    public void RoundTripPreservesTheInstantAsLocalTime()
     {
         var measuredAt = new DateTimeOffset(2026, 5, 4, 9, 15, 0, TimeSpan.FromHours(3));
         var line = ReadingLineSerializer.ToLine(ReadingFactory.Create(measuredAt: measuredAt));
 
         ReadingLineSerializer.TryParse(line, out var parsed).ShouldBeTrue();
 
-        parsed.MeasuredAt.ToUniversalTime().ShouldBe(measuredAt.ToUniversalTime());
-        parsed.MeasuredAt.Offset.ShouldBe(TimeSpan.FromHours(3));
+        parsed.MeasuredAt.ShouldBe(measuredAt.ToLocalTime());
+    }
+
+    [Fact]
+    public void WritesTheFiveFieldsTheUserCaresAbout()
+    {
+        var measuredAt = new DateTimeOffset(2026, 5, 4, 9, 15, 0, TimeSpan.Zero).ToLocalTime();
+        var reading = ReadingFactory.Create(135, 85, measuredAt: measuredAt, tag: "after a run");
+
+        var line = ReadingLineSerializer.ToLine(reading);
+
+        line.ShouldContain($"\"Date\":\"{measuredAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}\"");
+        line.ShouldContain($"\"Time\":\"{measuredAt.ToString("HH:mm", CultureInfo.InvariantCulture)}\"");
+        line.ShouldContain("\"Sys\":135");
+        line.ShouldContain("\"Dia\":85");
+        line.ShouldContain("\"Tag\":\"after a run\"");
+    }
+
+    [Fact]
+    public void DoesNotWriteArmOrPosition()
+    {
+        var line = ReadingLineSerializer.ToLine(ReadingFactory.Create());
+
+        line.ShouldNotContain("Arm");
+        line.ShouldNotContain("Position");
     }
 
     [Fact]
@@ -66,7 +83,7 @@ public sealed class ReadingLineSerializerTests
     [Fact]
     public void LineIsReadableByAHuman() =>
         ReadingLineSerializer.ToLine(ReadingFactory.Create(135, 85))
-            .ShouldContain("\"Systolic\":135");
+            .ShouldContain("\"Sys\":135");
 
     [Theory]
     [InlineData("")]
@@ -93,22 +110,77 @@ public sealed class ReadingLineSerializerTests
     public void RejectsImplausibleValues(int systolic, int diastolic)
     {
         var line = $$"""
-            {"Id":"0197f0a0-0000-7000-8000-000000000001","Systolic":{{systolic}},"Diastolic":{{diastolic}},"MeasuredAt":"2026-05-04T09:15:00.0000000+00:00","Arm":"Left","Position":"Sitting","UpdatedAt":"2026-05-04T09:15:00.0000000+00:00","Deleted":false}
+            {"Date":"2026-05-04","Time":"09:15","Sys":{{systolic}},"Dia":{{diastolic}},"Id":"0197f0a0-0000-7000-8000-000000000001","UpdatedAt":"2026-05-04T09:15:00.0000000+00:00","Deleted":false}
             """;
 
         ReadingLineSerializer.TryParse(line, out _).ShouldBeFalse();
     }
 
-    [Fact]
-    public void UnknownEnumValuesFallBackRatherThanFailing()
+    [Theory]
+    [InlineData("04/05/2026", "09:15")]
+    [InlineData("2026-13-04", "09:15")]
+    [InlineData("2026-05-04", "9:15 AM")]
+    [InlineData("2026-05-04", "25:00")]
+    public void RejectsUnparseableDatesAndTimes(string date, string time)
     {
-        var line = """
-            {"Id":"0197f0a0-0000-7000-8000-000000000001","Systolic":120,"Diastolic":80,"MeasuredAt":"2026-05-04T09:15:00.0000000+00:00","Arm":"Tentacle","Position":"Hovering","UpdatedAt":"2026-05-04T09:15:00.0000000+00:00","Deleted":false}
+        var line = $$"""
+            {"Date":"{{date}}","Time":"{{time}}","Sys":120,"Dia":80,"Id":"0197f0a0-0000-7000-8000-000000000001","UpdatedAt":"2026-05-04T09:15:00.0000000+00:00","Deleted":false}
+            """;
+
+        ReadingLineSerializer.TryParse(line, out _).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AMissingTimeFallsBackToTheMorning(string time)
+    {
+        var line = $$"""
+            {"Date":"2026-05-04","Time":"{{time}}","Sys":120,"Dia":80,"Id":"0197f0a0-0000-7000-8000-000000000001","UpdatedAt":"2026-05-04T09:15:00.0000000+00:00","Deleted":false}
             """;
 
         ReadingLineSerializer.TryParse(line, out var parsed).ShouldBeTrue();
-        parsed.Context.Arm.ShouldBe(MeasurementArm.Unspecified);
-        parsed.Context.Position.ShouldBe(BodyPosition.Unspecified);
+
+        parsed.MeasuredAt.TimeOfDay.ShouldBe(TimeSpan.Parse(
+            ReadingLineSerializer.DefaultTime,
+            CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public void ReadsAJournalWrittenBeforeTheFormatChanged()
+    {
+        var line = """
+            {"Id":"0197f0a0-0000-7000-8000-000000000001","Systolic":128,"Diastolic":82,"MeasuredAt":"2026-05-04T09:15:00.0000000+00:00","Arm":"Left","Position":"Sitting","Note":"after coffee","UpdatedAt":"2026-05-04T09:20:00.0000000+00:00","Deleted":false}
+            """;
+
+        ReadingLineSerializer.TryParse(line, out var parsed).ShouldBeTrue();
+
+        parsed.Systolic.MmHg.ShouldBe(128);
+        parsed.Diastolic.MmHg.ShouldBe(82);
+        parsed.Context.Tag.ShouldBe("after coffee");
+        parsed.MeasuredAt.ShouldBe(new DateTimeOffset(2026, 5, 4, 9, 15, 0, TimeSpan.Zero).ToLocalTime());
+    }
+
+    [Fact]
+    public void ARetractedLegacyLineStaysRetracted()
+    {
+        var line = """
+            {"Id":"0197f0a0-0000-7000-8000-000000000001","Systolic":128,"Diastolic":82,"MeasuredAt":"2026-05-04T09:15:00.0000000+00:00","UpdatedAt":"2026-05-04T09:20:00.0000000+00:00","Deleted":true}
+            """;
+
+        ReadingLineSerializer.TryParse(line, out var parsed).ShouldBeTrue();
+
+        parsed.IsDeleted.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void RejectsALegacyLineWithAnUnusableTimestamp()
+    {
+        var line = """
+            {"Id":"0197f0a0-0000-7000-8000-000000000001","Systolic":128,"Diastolic":82,"MeasuredAt":"whenever","UpdatedAt":"2026-05-04T09:20:00.0000000+00:00","Deleted":false}
+            """;
+
+        ReadingLineSerializer.TryParse(line, out _).ShouldBeFalse();
     }
 
     [Fact]

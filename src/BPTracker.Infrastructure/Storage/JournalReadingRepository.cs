@@ -24,6 +24,7 @@ public sealed class JournalReadingRepository : IReadingRepository, IDisposable
 
     private readonly IStorageLocation _location;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly HashSet<string> _migrated = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<Guid, BloodPressureReading> _readings = [];
 
     // Null means "never loaded". An empty string is a valid signature for an empty folder,
@@ -116,6 +117,8 @@ public sealed class JournalReadingRepository : IReadingRepository, IDisposable
 
     private async Task LoadAsync(CancellationToken cancellationToken)
     {
+        await MigrateOwnJournalAsync(cancellationToken).ConfigureAwait(false);
+
         var signature = BuildSignature();
         if (_loadedSignature is not null && signature == _loadedSignature)
         {
@@ -151,6 +154,22 @@ public sealed class JournalReadingRepository : IReadingRepository, IDisposable
     }
 
     private void Merge(BloodPressureReading reading) => Merge(_readings, reading);
+
+    /// <summary>
+    /// Brings this device's own journal up to the current line shape, once per folder.
+    /// </summary>
+    /// <remarks>
+    /// Only ever the file this device writes. Another device's journal stays untouched and is read
+    /// in whichever shape it is already in.
+    /// </remarks>
+    private async Task MigrateOwnJournalAsync(CancellationToken cancellationToken)
+    {
+        var path = _location.DeviceJournalPath;
+        if (_migrated.Add(path))
+        {
+            await JournalMigration.RunAsync(path, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
     private static void Merge(Dictionary<Guid, BloodPressureReading> target, BloodPressureReading reading) =>
         target[reading.Id] = target.TryGetValue(reading.Id, out var existing)

@@ -30,6 +30,10 @@ public sealed class StorageFixture : IDisposable
     public void WriteForeignJournal(string deviceId, params string[] lines) =>
         File.WriteAllLines(Path.Combine(Location.DataFolder, $"readings-{deviceId}.ndjson"), lines);
 
+    /// <summary>Seeds the journal this device writes, as an older build would have left it.</summary>
+    public void WriteOwnJournal(params string[] lines) =>
+        File.WriteAllLines(Location.DeviceJournalPath, lines);
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

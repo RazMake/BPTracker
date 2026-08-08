@@ -8,7 +8,12 @@ Both apps are built, green, and share one core. Quality gates, CI and release au
 place and verified.
 
 - 4 shared libraries + WPF desktop + MAUI Android head, building with **zero warnings**.
-- **356 tests**, line coverage **98.4%** against a required floor of 85%.
+- **404 tests**, line coverage **97.8%** against a required floor of 85%.
+- The journal line is `Date, Time, Sys, Dia, Tag` plus `Id`, `UpdatedAt`, `Deleted`. See
+  [ADR-0005](decisions/ADR-0005-journal-line-shape.md).
+- Both apps export the same three things - CSV, a PNG of the chart, a PNG of the readings table -
+  from `BPTracker.Presentation.Export`. The desktop asks with a save dialog; the phone writes into
+  the data folder.
 - `dev.ps1 setup` provisions the pinned .NET SDK, MAUI Android workload, JDK, Android SDK,
   emulator image, local tools and NuGet packages; all other tasks use that SDK directly.
 - CI builds both apps and publishes on every push to `main`, scoped by changed paths.
@@ -39,6 +44,13 @@ place and verified.
 - The desktop chart draws every exact reading. Hovering groups systolic and diastolic into one
   date/time tooltip and includes the reading tag when present; a vertical guide follows the pointer
   anywhere inside the plot, including gaps between measurements.
+- Selecting a history row moves the selection guide and the two ring markers that already sit on
+  the chart. Reassigning `Series`, `Sections` or the axes on selection makes every series replay
+  its entrance animation, which reads as a flicker, so only a period or data change rebuilds them.
+- The history table overrides the four `SystemColors` selection keys inside its style. WPF's stock
+  templates paint a selected row with the near-white *inactive* highlight once the grid loses
+  focus, which hid the light cell text. The selection is also cleared outright once keyboard focus
+  leaves the grid, which clears the chart highlight with it.
 - The desktop history table orders measurements newest first, independent of journal file order.
 - Both pages relayout on rotation: the entry screen goes from stacked to three columns.
 - Storage round-trips, merges journals from another device, and survives a truncated file.
@@ -54,7 +66,8 @@ place and verified.
 | **Phone chart on a device** | Builds and is unit tested, but the touch bands and drag feel have not been tried on real hardware. |
 | **Phone chart zoom** | The horizontal scale is fixed at `ChartRequest.DefaultPixelsPerHour`. Pinch-zoom is not implemented. |
 | **Faint duplicate near the top of the entry screen** | On the Android 36 emulator a dim copy of the Save button's text is drawn about 680 dip above the button. `uiautomator dump` and `dumpsys activity top` both show exactly one button, so it is a rendering artifact, not a duplicated view. It survives a cold start, a FlexLayout rewrite and removing the Border's `StrokeShape`. Check on real hardware before spending more time on it. |
-| **Arm and position** | Still on the reading and still written by the desktop; neither app asks for them. |
+| **Arm and position** | Still on the domain reading, no longer written to disk and asked for by neither app. Delete them the next time the domain changes for another reason. |
+| **Exports on a device** | The three exports build and are unit tested through `IExportRenderer`. Neither the WPF `RenderTargetBitmap` capture nor the Android `PlatformBitmapExportContext` render has been eyeballed yet. |
 
 ## Running the phone app locally
 

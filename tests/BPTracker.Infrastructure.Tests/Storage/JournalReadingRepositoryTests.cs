@@ -6,6 +6,11 @@ namespace BPTracker.Infrastructure.Tests.Storage;
 
 public sealed class JournalReadingRepositoryTests
 {
+    private const string LegacyLine =
+        """
+        {"Id":"0197f0a0-0000-7000-8000-000000000001","Systolic":128,"Diastolic":82,"MeasuredAt":"2026-05-04T09:15:00.0000000+00:00","Arm":"Left","Position":"Sitting","Note":"after coffee","UpdatedAt":"2026-05-04T09:20:00.0000000+00:00","Deleted":false}
+        """;
+
     [Fact]
     public async Task UpsertThenFindRoundTrips()
     {
@@ -188,6 +193,50 @@ public sealed class JournalReadingRepositoryTests
         using var repository = fixture.CreateRepository();
 
         (await repository.GetAllIncludingRetractedAsync()).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task RewritesThisDevicesJournalIntoTheCurrentShape()
+    {
+        using var fixture = new StorageFixture();
+        using var repository = fixture.CreateRepository();
+        fixture.WriteOwnJournal(LegacyLine);
+
+        var all = await repository.GetAllIncludingRetractedAsync();
+
+        all.Count.ShouldBe(1);
+        var migrated = await File.ReadAllTextAsync(fixture.Location.DeviceJournalPath);
+        migrated.ShouldContain("\"Sys\":128");
+        migrated.ShouldNotContain("Systolic");
+        migrated.ShouldNotContain("MeasuredAt");
+    }
+
+    [Fact]
+    public async Task LeavesAnotherDevicesJournalExactlyAsItArrived()
+    {
+        using var fixture = new StorageFixture();
+        using var repository = fixture.CreateRepository();
+        await repository.UpsertAsync(ReadingFactory.Create());
+        fixture.WriteForeignJournal("phone01", LegacyLine);
+        var foreign = Path.Combine(fixture.Location.DataFolder, "readings-phone01.ndjson");
+
+        (await repository.GetAllIncludingRetractedAsync()).Count.ShouldBe(2);
+
+        (await File.ReadAllLinesAsync(foreign)).ShouldBe([LegacyLine]);
+    }
+
+    [Fact]
+    public async Task LeavesAJournalAlreadyInTheCurrentShapeUntouched()
+    {
+        using var fixture = new StorageFixture();
+        using var first = fixture.CreateRepository();
+        await first.UpsertAsync(ReadingFactory.Create());
+        var before = await File.ReadAllTextAsync(fixture.Location.DeviceJournalPath);
+
+        using var second = fixture.CreateRepository();
+        await second.GetAllIncludingRetractedAsync();
+
+        (await File.ReadAllTextAsync(fixture.Location.DeviceJournalPath)).ShouldBe(before);
     }
 
     [Fact]

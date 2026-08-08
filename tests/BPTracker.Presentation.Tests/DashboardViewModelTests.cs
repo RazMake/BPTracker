@@ -2,6 +2,7 @@ using BPTracker.Application.Abstractions;
 using BPTracker.Application.Readings;
 using BPTracker.Application.Trends;
 using BPTracker.Presentation;
+using BPTracker.Presentation.Export;
 using BPTracker.Presentation.Readings;
 using BPTracker.Presentation.Storage;
 using BPTracker.Presentation.Trends;
@@ -22,7 +23,13 @@ public sealed class DashboardViewModelTests
             new GetReadingHistoryUseCase(_repository, _clock),
             new RetractReadingUseCase(_repository, _clock)),
         new TrendViewModel(new GetTrendUseCase(_repository, _clock)),
-        new StorageLocationViewModel(_location));
+        new StorageLocationViewModel(_location),
+        CreateExport());
+
+    private ExportViewModel CreateExport() => new(
+        new GetReadingHistoryUseCase(_repository, _clock),
+        Substitute.For<IExportRenderer>(),
+        _clock);
 
     private void GivenReadings(params Domain.Readings.BloodPressureReading[] readings) =>
         _repository.GetRangeAsync(
@@ -98,6 +105,7 @@ public sealed class DashboardViewModelTests
         viewModel.History.ShouldNotBeNull();
         viewModel.Trend.ShouldNotBeNull();
         viewModel.Storage.ShouldNotBeNull();
+        viewModel.Export.ShouldNotBeNull();
     }
 
     [Fact]
@@ -122,10 +130,12 @@ public sealed class DashboardViewModelTests
             new RetractReadingUseCase(_repository, _clock));
         var trend = new TrendViewModel(new GetTrendUseCase(_repository, _clock));
         var storage = new StorageLocationViewModel(_location);
+        var export = CreateExport();
 
-        Should.Throw<ArgumentNullException>(() => new DashboardViewModel(null!, history, trend, storage));
-        Should.Throw<ArgumentNullException>(() => new DashboardViewModel(entry, null!, trend, storage));
-        Should.Throw<ArgumentNullException>(() => new DashboardViewModel(entry, history, null!, storage));
-        Should.Throw<ArgumentNullException>(() => new DashboardViewModel(entry, history, trend, null!));
+        Should.Throw<ArgumentNullException>(() => new DashboardViewModel(null!, history, trend, storage, export));
+        Should.Throw<ArgumentNullException>(() => new DashboardViewModel(entry, null!, trend, storage, export));
+        Should.Throw<ArgumentNullException>(() => new DashboardViewModel(entry, history, null!, storage, export));
+        Should.Throw<ArgumentNullException>(() => new DashboardViewModel(entry, history, trend, null!, export));
+        Should.Throw<ArgumentNullException>(() => new DashboardViewModel(entry, history, trend, storage, null!));
     }
 }

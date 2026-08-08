@@ -10,7 +10,7 @@
 | **Reading** | One measurement: two pressures, a timestamp, and optional context. |
 | **Retracted** | Soft-deleted. The record stays as a tombstone so the deletion can sync. |
 | **Measurement context** | Optional circumstances: arm, body position, tag. |
-| **Tag** | Optional one-line label on a reading, at most 100 characters, for the rare measurement that needs explaining. Called `Note` on disk, for compatibility. |
+| **Tag** | Optional one-line label on a reading, at most 100 characters, for the rare measurement that needs explaining. Written as `Tag` on disk. |
 
 ## Categories (ACC/AHA 2017)
 

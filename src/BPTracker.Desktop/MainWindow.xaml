@@ -84,13 +84,7 @@
                            Foreground="{StaticResource Accent}"
                            Text="{Binding Entry.PreviewCategoryName}" />
 
-                <TextBlock Text="{Binding Entry.Validation.Message}"
-                           Foreground="{StaticResource CategoryStage2}"
-                           TextWrapping="Wrap"
-                           Margin="0,6,0,0"
-                           HorizontalAlignment="Center" />
-
-                <Grid Margin="0,16,0,0">
+                <Grid Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -106,6 +100,12 @@
                              FontSize="12"
                              ToolTip="Optional. A word or two explaining an unusual reading." />
                 </Grid>
+
+                <TextBlock Text="{Binding Entry.Validation.Message}"
+                           Foreground="{StaticResource CategoryStage2}"
+                           TextWrapping="Wrap"
+                           Margin="0,6,0,0"
+                           HorizontalAlignment="Center" />
 
                 <Button Content="Save reading"
                         Style="{StaticResource PrimaryButton}"
@@ -137,6 +137,28 @@
                 </StackPanel>
                 <TextBlock Text="{Binding Storage.StatusMessage}"
                            Foreground="{StaticResource CategoryStage2}"
+                           TextWrapping="Wrap"
+                           Margin="0,6,0,0" />
+
+                <TextBlock Text="EXPORT" Style="{StaticResource Caption}" Margin="0,12,0,0" />
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Button Content="CSV"
+                            Padding="8,6"
+                            Margin="0,0,8,0"
+                            ToolTip="Every reading as Date, Time, Sys, Dia, Tag."
+                            Command="{Binding Export.ExportCsvCommand}" />
+                    <Button Content="Chart PNG"
+                            Padding="8,6"
+                            Margin="0,0,8,0"
+                            ToolTip="A picture of the chart as it is drawn now."
+                            Command="{Binding Export.ExportChartCommand}" />
+                    <Button Content="Data PNG"
+                            Padding="8,6"
+                            ToolTip="A picture of the readings as a table."
+                            Command="{Binding Export.ExportDataCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding Export.StatusMessage}"
+                           Style="{StaticResource Caption}"
                            TextWrapping="Wrap"
                            Margin="0,6,0,0" />
 

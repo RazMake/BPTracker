@@ -25,6 +25,14 @@
 
             <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Bad}" FontSize="14" />
 
+            <Label Text="EXPORT" Style="{StaticResource CaptionLabel}" Margin="0,20,0,0" />
+            <Label FontSize="14" TextColor="{StaticResource TextMuted}"
+                   Text="Written into the data folder above, so your sync app picks them up too." />
+            <Button Text="CSV" Clicked="OnExportCsv" />
+            <Button Text="Chart - PNG" Clicked="OnExportChart" />
+            <Button Text="Data - PNG" Clicked="OnExportData" />
+            <Label x:Name="ExportStatusLabel" FontSize="14" TextColor="{StaticResource TextMuted}" />
+
             <Label Text="DEVICE ID" Style="{StaticResource CaptionLabel}" Margin="0,20,0,0" />
             <Label Text="{Binding DeviceId}" FontSize="15" />
         </VerticalStackLayout>

@@ -3,6 +3,8 @@
 - **Status:** accepted
 - **Date:** 2026-08-06
 - **Supersedes:** the SQLite storage described in the original tech stack notes
+- **Amended by:** [ADR-0005](ADR-0005-journal-line-shape.md), which reshapes the line. The storage
+  model below is unchanged.
 
 ## Context
 

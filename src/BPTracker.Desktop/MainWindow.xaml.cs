@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Windows;
 using BPTracker.Domain.Readings;
 using BPTracker.Presentation;
+using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.SkiaSharpView;
 
@@ -13,20 +14,27 @@ public partial class MainWindow : Window
     private readonly DashboardViewModel _dashboard;
     private readonly RectangularSection _pointerGuide = TrendChartBuilder.BuildPointerGuide();
     private readonly RectangularSection _selectionGuide = TrendChartBuilder.BuildSelectionGuide();
+    private readonly LineSeries<DateTimePoint> _selectedSystolic =
+        TrendChartBuilder.BuildSelectionMarker("Selected systolic");
+    private readonly LineSeries<DateTimePoint> _selectedDiastolic =
+        TrendChartBuilder.BuildSelectionMarker("Selected diastolic");
     private BloodPressureReading? _selectedReading;
 
-    public MainWindow(DashboardViewModel dashboard)
+    public MainWindow(DashboardViewModel dashboard, DesktopExportRenderer exportRenderer)
     {
         _dashboard = dashboard ?? throw new ArgumentNullException(nameof(dashboard));
+        ArgumentNullException.ThrowIfNull(exportRenderer);
 
         InitializeComponent();
 
+        exportRenderer.Chart = TrendChart;
         DataContext = _dashboard;
         _dashboard.Trend.PropertyChanged += OnTrendChanged;
         _dashboard.RefreshFailed += OnRefreshFailed;
         TrendChart.MouseMove += OnTrendChartMouseMove;
         TrendChart.MouseLeave += OnTrendChartMouseLeave;
         HistoryGrid.SelectionChanged += OnHistorySelectionChanged;
+        HistoryGrid.IsKeyboardFocusWithinChanged += OnHistoryFocusChanged;
 
         Loaded += OnLoaded;
         Closed += OnClosed;
@@ -52,6 +60,7 @@ public partial class MainWindow : Window
         TrendChart.MouseMove -= OnTrendChartMouseMove;
         TrendChart.MouseLeave -= OnTrendChartMouseLeave;
         HistoryGrid.SelectionChanged -= OnHistorySelectionChanged;
+        HistoryGrid.IsKeyboardFocusWithinChanged -= OnHistoryFocusChanged;
         _dashboard.Dispose();
     }
 
@@ -70,21 +79,41 @@ public partial class MainWindow : Window
     {
         var bounds = TrendChartBuilder.BuildBounds(_dashboard.Trend);
 
-        _selectionGuide.Xi = _selectedReading?.MeasuredAt.LocalDateTime.Ticks;
-        _selectionGuide.Xj = _selectionGuide.Xi;
-        _selectionGuide.IsVisible = _selectedReading is not null;
+        ApplySelection();
 
         TrendChartBuilder.ApplyTheme(TrendChart);
-        TrendChart.Series = TrendChartBuilder.BuildSeries(_dashboard.Trend, _selectedReading);
+        TrendChart.Series = TrendChartBuilder.BuildSeries(_dashboard.Trend, _selectedSystolic, _selectedDiastolic);
         TrendChart.Sections = TrendChartBuilder.BuildSections(bounds, _pointerGuide, _selectionGuide);
         TrendChart.XAxes = TrendChartBuilder.BuildXAxes(_dashboard.Trend);
         TrendChart.YAxes = TrendChartBuilder.BuildYAxes(bounds);
     }
 
+    // Moves the guide and markers that are already on the chart. Reassigning Series, Sections or
+    // Axes would make every series animate in again, which reads as a flicker.
+    private void ApplySelection()
+    {
+        _selectionGuide.Xi = _selectedReading?.MeasuredAt.LocalDateTime.Ticks;
+        _selectionGuide.Xj = _selectionGuide.Xi;
+        _selectionGuide.IsVisible = _selectedReading is not null;
+
+        TrendChartBuilder.MoveSelectionMarker(_selectedSystolic, _selectedReading, reading => reading.Systolic.MmHg);
+        TrendChartBuilder.MoveSelectionMarker(_selectedDiastolic, _selectedReading, reading => reading.Diastolic.MmHg);
+    }
+
     private void OnHistorySelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         _selectedReading = HistoryGrid.SelectedItem as BloodPressureReading;
-        RedrawChart();
+        ApplySelection();
+    }
+
+    // IsKeyboardFocusWithin rather than LostKeyboardFocus, which also fires when focus moves from
+    // one cell of the grid to another.
+    private void OnHistoryFocusChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (!(bool)e.NewValue)
+        {
+            HistoryGrid.UnselectAll();
+        }
     }
 
     private void OnTrendChartMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
