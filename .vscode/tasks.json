@@ -131,7 +131,7 @@
         },
         {
             "label": "setup",
-            "detail": "Restore tools and packages, and check the Android workload",
+            "detail": "Install the SDK, Android toolchain, emulator and packages",
             "type": "shell",
             "command": "pwsh",
             "args": [

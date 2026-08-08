@@ -31,11 +31,17 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = $PSScriptRoot
 $solution = Join-Path $repoRoot 'BPTracker.slnx'
+$globalJson = Join-Path $repoRoot 'global.json'
+$requiredSdkVersion = (Get-Content -Raw $globalJson | ConvertFrom-Json).sdk.version
 $artifacts = Join-Path $repoRoot 'artifacts'
 $coverageDir = Join-Path $artifacts 'coverage'
 $reportDir = Join-Path $artifacts 'coveragereport'
 $runSettings = Join-Path $repoRoot 'build/coverage.runsettings'
 
+$bootstrapRoot = Join-Path $env:LOCALAPPDATA 'BPTracker'
+$localDotnetRoot = Join-Path $bootstrapRoot 'dotnet'
+$localDotnet = Join-Path $localDotnetRoot 'dotnet.exe'
+$managedJavaHome = Join-Path $bootstrapRoot 'jdk-17'
 $androidSdk = Join-Path $env:LOCALAPPDATA 'Android/Sdk'
 $avdName = 'BPTracker_Pixel'
 $systemImage = 'system-images;android-36;google_apis;x86_64'
@@ -57,14 +63,74 @@ function Invoke-Checked {
     }
 }
 
+function Get-DotNetHost {
+    $candidates = @($localDotnet)
+    $systemDotnet = Get-Command dotnet -ErrorAction SilentlyContinue
+    if ($systemDotnet) {
+        $candidates += $systemDotnet.Source
+    }
+
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        if (-not (Test-Path $candidate)) {
+            continue
+        }
+
+        # Run this from the repo so global.json proves that this host can select the pinned SDK.
+        $version = & $candidate --version 2>$null
+        if ($LASTEXITCODE -eq 0 -and $version) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
+
+function Invoke-DotNet {
+    # Call with -Arguments @(...), which preserves MSBuild switches such as -p:Name=Value.
+    param([string[]]$Arguments)
+
+    if (-not $script:dotnet) {
+        throw 'No compatible .NET SDK is available. Run ./dev.ps1 setup first.'
+    }
+
+    & $script:dotnet @Arguments
+}
+
+function Install-DotNetSdk {
+    Write-Step "Installing .NET SDK $requiredSdkVersion for this user"
+    New-Item -ItemType Directory -Path $bootstrapRoot -Force | Out-Null
+
+    $installer = Join-Path $bootstrapRoot 'dotnet-install.ps1'
+    if ($PSVersionTable.PSVersion.Major -lt 6) {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    }
+    Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer
+    & $installer -Version $requiredSdkVersion -InstallDir $localDotnetRoot -NoPath
+    if (-not $?) {
+        throw ".NET SDK installation failed with exit code $LASTEXITCODE."
+    }
+
+    $script:dotnet = Get-DotNetHost
+    if (-not $script:dotnet) {
+        throw "The installed .NET SDK does not satisfy global.json ($requiredSdkVersion)."
+    }
+}
+
+function Ensure-DotNetSdk {
+    $script:dotnet = Get-DotNetHost
+    if (-not $script:dotnet) {
+        Install-DotNetSdk
+    }
+}
+
 function Invoke-Build {
     Write-Step "Building ($Configuration), warnings are errors"
-    Invoke-Checked { dotnet build $solution -c $Configuration --nologo -warnaserror } 'Build'
+    Invoke-Checked { Invoke-DotNet -Arguments @('build', $solution, '-c', $Configuration, '--nologo', '-warnaserror') } 'Build'
 }
 
 function Invoke-Test {
     Write-Step 'Running tests'
-    Invoke-Checked { dotnet test $solution -c $Configuration --nologo } 'Tests'
+    Invoke-Checked { Invoke-DotNet -Arguments @('test', $solution, '-c', $Configuration, '--nologo') } 'Tests'
 }
 
 function Invoke-Coverage {
@@ -74,24 +140,28 @@ function Invoke-Coverage {
     if (Test-Path $reportDir) { Remove-Item $reportDir -Recurse -Force }
 
     Invoke-Checked {
-        dotnet test $solution -c $Configuration --nologo `
-            --collect 'XPlat Code Coverage' `
-            --settings $runSettings `
-            --results-directory $coverageDir
+        Invoke-DotNet -Arguments @(
+            'test', $solution, '-c', $Configuration, '--nologo',
+            '--collect', 'XPlat Code Coverage',
+            '--settings', $runSettings,
+            '--results-directory', $coverageDir
+        )
     } 'Tests'
 
     Write-Step "Building report and enforcing the $coverageThreshold% floor"
-    Invoke-Checked { dotnet tool restore } 'Tool restore'
+    Invoke-Checked { Invoke-DotNet -Arguments @('tool', 'restore') } 'Tool restore'
 
     # ReportGenerator exits non-zero when line coverage falls under the threshold,
     # which is what actually enforces the gate. The threshold is a *setting*, so it needs
     # the double-dash prefix; with a single dash it is silently ignored.
     Invoke-Checked {
-        dotnet reportgenerator `
-            "-reports:$coverageDir/**/coverage.cobertura.xml" `
-            "-targetdir:$reportDir" `
-            '-reporttypes:Html;MarkdownSummaryGithub;TextSummary' `
+        Invoke-DotNet -Arguments @(
+            'reportgenerator',
+            "-reports:$coverageDir/**/coverage.cobertura.xml",
+            "-targetdir:$reportDir",
+            '-reporttypes:Html;MarkdownSummaryGithub;TextSummary',
             "--minimumCoverageThresholds:lineCoverage=$coverageThreshold"
+        )
     } 'Coverage gate'
 
     $summary = Join-Path $reportDir 'Summary.txt'
@@ -114,7 +184,7 @@ function Invoke-Desktop {
     }
 
     Write-Step 'Launching the desktop app'
-    Invoke-Checked { dotnet run --project $project -c $Configuration } 'Desktop run'
+    Invoke-Checked { Invoke-DotNet -Arguments @('run', '--project', $project, '-c', $Configuration) } 'Desktop run'
 }
 
 function Get-AttachedDevices {
@@ -178,13 +248,17 @@ function Start-Emulator {
 }
 
 function Resolve-JavaHome {
+    if (Test-Path (Join-Path $managedJavaHome 'bin/java.exe')) {
+        return $managedJavaHome
+    }
+
     if ($env:JAVA_HOME -and (Test-Path (Join-Path $env:JAVA_HOME 'bin/java.exe'))) {
         return $env:JAVA_HOME
     }
 
     # The Android workload needs a JDK but does not set JAVA_HOME for us.
     $candidate = Get-ChildItem "$env:LOCALAPPDATA/Programs/Microsoft" -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -like 'jdk-*' } |
+        Where-Object { $_.Name -like 'jdk-*' -and (Test-Path (Join-Path $_.FullName 'bin/java.exe')) } |
         Sort-Object Name -Descending |
         Select-Object -First 1
 
@@ -216,13 +290,13 @@ function Invoke-Android {
 
     Write-Step 'Deploying to the Android device'
     Invoke-Checked {
-        dotnet build $project -c $Configuration -f net10.0-android -t:Run
+        Invoke-DotNet -Arguments @('build', $project, '-c', $Configuration, '-f', 'net10.0-android', '-t:Run')
     } 'Android deploy'
 }
 
 function Invoke-Format {
     Write-Step 'Applying code style'
-    Invoke-Checked { dotnet format $solution } 'Format'
+    Invoke-Checked { Invoke-DotNet -Arguments @('format', $solution) } 'Format'
 }
 
 function Invoke-Clean {
@@ -230,53 +304,75 @@ function Invoke-Clean {
     foreach ($dir in @($artifacts)) {
         if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
     }
-    Invoke-Checked { dotnet clean $solution --nologo } 'Clean'
+    Invoke-Checked { Invoke-DotNet -Arguments @('clean', $solution, '--nologo') } 'Clean'
 }
 
 function Invoke-Setup {
-    Write-Step 'Restoring tools and packages'
-    Invoke-Checked { dotnet tool restore } 'Tool restore'
-    Invoke-Checked { dotnet restore $solution } 'Restore'
+    Ensure-DotNetSdk
 
-    Write-Step 'Checking the Android toolchain'
+    Write-Step 'Installing the workloads required by this solution'
+    Invoke-Checked { Invoke-DotNet -Arguments @('workload', 'restore', $solution, '--skip-manifest-update') } 'Workload restore'
 
-    $workloads = dotnet workload list
-    # -match against an array returns the matching lines, so an empty result means "not installed".
-    # `$workloads -notmatch 'android'` returns every other line and is therefore always truthy.
-    if (-not ($workloads -match 'android')) {
-        Write-Host 'Android workload missing. In an elevated shell run:' -ForegroundColor Yellow
-        Write-Host '    dotnet workload install maui-android' -ForegroundColor Yellow
-    }
-    else {
-        Write-Host 'Android workload present.' -ForegroundColor Green
-    }
+    $mobileProject = Join-Path $repoRoot 'src/BPTracker.Mobile/BPTracker.Mobile.csproj'
+    Write-Step 'Installing the JDK and Android SDK'
+    Invoke-Checked {
+        Invoke-DotNet -Arguments @(
+            'build', $mobileProject, '-t:InstallAndroidDependencies', '-f', 'net10.0-android',
+            "-p:AndroidSdkDirectory=$androidSdk",
+            "-p:JavaSdkDirectory=$managedJavaHome",
+            '-p:AcceptAndroidSDKLicenses=True'
+        )
+    } 'Android dependency installation'
 
     $javaHome = Resolve-JavaHome
-    if ($javaHome) {
-        Write-Host "JDK found: $javaHome" -ForegroundColor Green
-        $env:JAVA_HOME = $javaHome
+    if (-not $javaHome) {
+        throw 'Android dependency installation completed but no JDK was found.'
     }
-    else {
-        Write-Host 'No JDK found. Download Microsoft OpenJDK 17 and extract it to' -ForegroundColor Yellow
-        Write-Host "    $env:LOCALAPPDATA\Programs\Microsoft" -ForegroundColor Yellow
-        Write-Host '    https://aka.ms/download-jdk/microsoft-jdk-17-windows-x64.zip' -ForegroundColor Yellow
+    $env:JAVA_HOME = $javaHome
+    $env:ANDROID_SDK_ROOT = $androidSdk
+
+    $sdkManager = Join-Path $androidSdk 'cmdline-tools/latest/bin/sdkmanager.bat'
+    if (-not (Test-Path $sdkManager)) {
+        throw "Android SDK installation did not provide sdkmanager at $sdkManager."
     }
 
-    if (Test-Path "$env:LOCALAPPDATA/Android/Sdk/platforms") {
-        Write-Host 'Android SDK present.' -ForegroundColor Green
+    Write-Step 'Installing Android emulator components'
+    $licenseAnswers = 1..100 | ForEach-Object { 'y' }
+    $licenseAnswers | & $sdkManager "--sdk_root=$androidSdk" --licenses
+    if ($LASTEXITCODE -ne 0) {
+        throw "Android license acceptance failed with exit code $LASTEXITCODE."
     }
-    else {
-        Write-Host 'Android SDK missing. With JAVA_HOME set, run:' -ForegroundColor Yellow
-        Write-Host '    dotnet build src/BPTracker.Mobile/BPTracker.Mobile.csproj -t:InstallAndroidDependencies -f net10.0-android -p:AcceptAndroidSDKLicenses=True' -ForegroundColor Yellow
-    }
+    Invoke-Checked {
+        & $sdkManager "--sdk_root=$androidSdk" --install 'platform-tools' 'emulator' $systemImage
+    } 'Android emulator component installation'
+
+    Write-Step 'Restoring tools and packages'
+    Invoke-Checked { Invoke-DotNet -Arguments @('tool', 'restore') } 'Tool restore'
+    Invoke-Checked { Invoke-DotNet -Arguments @('restore', $solution) } 'Restore'
+
+    Write-Host ''
+    Write-Host 'Development dependencies are ready.' -ForegroundColor Green
 }
 
 Push-Location $repoRoot
 try {
+    if ($Task -eq 'setup') {
+        Ensure-DotNetSdk
+    }
+    else {
+        $script:dotnet = Get-DotNetHost
+        if (-not $script:dotnet) {
+            throw 'No compatible .NET SDK is available. Run ./dev.ps1 setup first.'
+        }
+    }
+
     # The solution includes the Android head, so any build needs a JDK on hand.
     $resolvedJava = Resolve-JavaHome
     if ($resolvedJava) {
         $env:JAVA_HOME = $resolvedJava
+    }
+    if (Test-Path $androidSdk) {
+        $env:ANDROID_SDK_ROOT = $androidSdk
     }
 
     switch ($Task) {

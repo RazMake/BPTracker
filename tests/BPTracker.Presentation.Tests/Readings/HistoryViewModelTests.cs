@@ -61,6 +61,19 @@ public sealed class HistoryViewModelTests
     }
 
     [Fact]
+    public async Task RefreshKeepsTheNewestMeasurementAtTheTop()
+    {
+        var newest = ReadingFactory.Create(measuredAt: _clock.LocalNow);
+        var older = ReadingFactory.Create(measuredAt: _clock.LocalNow.AddDays(-1));
+        GivenReadings(newest, older);
+        var viewModel = CreateViewModel();
+
+        await viewModel.RefreshAsync(CancellationToken.None);
+
+        viewModel.Readings.ShouldBe([newest, older]);
+    }
+
+    [Fact]
     public void LatestIsNullBeforeAnythingIsLoaded() =>
         CreateViewModel().Latest.ShouldBeNull();
 

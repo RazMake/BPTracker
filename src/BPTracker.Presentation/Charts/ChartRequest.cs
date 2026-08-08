@@ -5,8 +5,8 @@ namespace BPTracker.Presentation.Charts;
 /// </summary>
 public sealed record ChartRequest
 {
-    /// <summary>Default horizontal zoom: 60 pixels a day, so a phone shows roughly five days.</summary>
-    public const double DefaultPixelsPerHour = 2.5d;
+    /// <summary>Default horizontal zoom: 30 pixels a day, so a phone shows roughly ten days.</summary>
+    public const double DefaultPixelsPerHour = 1.25d;
 
     /// <summary>Samples in time order, oldest first.</summary>
     public required IReadOnlyList<ChartSample> Samples { get; init; }

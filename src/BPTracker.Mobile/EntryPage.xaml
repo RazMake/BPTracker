@@ -7,6 +7,7 @@
 
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Chart" Clicked="OnOpenChart" />
+        <ToolbarItem Text="Measurements" Clicked="OnOpenHistory" />
         <ToolbarItem Text="Settings" Clicked="OnOpenSettings" />
     </ContentPage.ToolbarItems>
 

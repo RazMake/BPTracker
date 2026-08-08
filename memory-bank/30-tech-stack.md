@@ -26,6 +26,8 @@ Pinned in [.config/dotnet-tools.json](../.config/dotnet-tools.json); run `dotnet
 
 ## Prerequisites
 
-- .NET 10 SDK.
-- For Android: `dotnet workload install maui-android` (needs an elevated shell) plus a JDK and
-  the Android SDK. `./dev.ps1 setup` reports whether the workload is present.
+Run `./dev.ps1 setup` on a fresh Windows machine. It installs the SDK version pinned in
+`global.json` into the current user's local app data when necessary, restores the workloads the
+solution requires (including `maui-android`), provisions the JDK and Android SDK, adds the
+emulator and the pinned system image, then restores the repository's tools and packages. It is
+safe to rerun.

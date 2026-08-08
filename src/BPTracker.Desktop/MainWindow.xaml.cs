@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
+using BPTracker.Domain.Readings;
 using BPTracker.Presentation;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.SkiaSharpView;
@@ -11,6 +12,8 @@ public partial class MainWindow : Window
 {
     private readonly DashboardViewModel _dashboard;
     private readonly RectangularSection _pointerGuide = TrendChartBuilder.BuildPointerGuide();
+    private readonly RectangularSection _selectionGuide = TrendChartBuilder.BuildSelectionGuide();
+    private BloodPressureReading? _selectedReading;
 
     public MainWindow(DashboardViewModel dashboard)
     {
@@ -23,6 +26,7 @@ public partial class MainWindow : Window
         _dashboard.RefreshFailed += OnRefreshFailed;
         TrendChart.MouseMove += OnTrendChartMouseMove;
         TrendChart.MouseLeave += OnTrendChartMouseLeave;
+        HistoryGrid.SelectionChanged += OnHistorySelectionChanged;
 
         Loaded += OnLoaded;
         Closed += OnClosed;
@@ -47,6 +51,7 @@ public partial class MainWindow : Window
         _dashboard.RefreshFailed -= OnRefreshFailed;
         TrendChart.MouseMove -= OnTrendChartMouseMove;
         TrendChart.MouseLeave -= OnTrendChartMouseLeave;
+        HistoryGrid.SelectionChanged -= OnHistorySelectionChanged;
         _dashboard.Dispose();
     }
 
@@ -65,11 +70,21 @@ public partial class MainWindow : Window
     {
         var bounds = TrendChartBuilder.BuildBounds(_dashboard.Trend);
 
+        _selectionGuide.Xi = _selectedReading?.MeasuredAt.LocalDateTime.Ticks;
+        _selectionGuide.Xj = _selectionGuide.Xi;
+        _selectionGuide.IsVisible = _selectedReading is not null;
+
         TrendChartBuilder.ApplyTheme(TrendChart);
-        TrendChart.Series = TrendChartBuilder.BuildSeries(_dashboard.Trend);
-        TrendChart.Sections = TrendChartBuilder.BuildSections(bounds, _pointerGuide);
+        TrendChart.Series = TrendChartBuilder.BuildSeries(_dashboard.Trend, _selectedReading);
+        TrendChart.Sections = TrendChartBuilder.BuildSections(bounds, _pointerGuide, _selectionGuide);
         TrendChart.XAxes = TrendChartBuilder.BuildXAxes(_dashboard.Trend);
         TrendChart.YAxes = TrendChartBuilder.BuildYAxes(bounds);
+    }
+
+    private void OnHistorySelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        _selectedReading = HistoryGrid.SelectedItem as BloodPressureReading;
+        RedrawChart();
     }
 
     private void OnTrendChartMouseMove(object sender, System.Windows.Input.MouseEventArgs e)

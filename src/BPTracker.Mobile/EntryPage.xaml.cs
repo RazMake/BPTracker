@@ -147,6 +147,9 @@ public partial class EntryPage : ContentPage
     private async void OnOpenChart(object? sender, EventArgs e) =>
         await Navigation.PushAsync(_services.GetRequiredService<ChartPage>());
 
+    private async void OnOpenHistory(object? sender, EventArgs e) =>
+        await Navigation.PushAsync(_services.GetRequiredService<HistoryPage>());
+
     private async void OnOpenSettings(object? sender, EventArgs e) =>
         await Navigation.PushAsync(_services.GetRequiredService<SettingsPage>());
 

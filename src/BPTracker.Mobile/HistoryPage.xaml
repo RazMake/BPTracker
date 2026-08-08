@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="BPTracker.Mobile.HistoryPage"
+             Title="Measurements">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Refresh" Clicked="OnRefresh" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto, *" Padding="12,8"
+          BackgroundColor="{StaticResource Background}">
+        <Border Grid.Row="0" StrokeShape="RoundRectangle 10" Padding="8,7" Margin="0,0,0,6">
+            <Grid ColumnDefinitions="*,55,55,*" ColumnSpacing="6">
+                <Label Grid.Column="0" Text="WHEN" Style="{StaticResource CaptionLabel}" />
+                <Label Grid.Column="1" Text="SYS" Style="{StaticResource CaptionLabel}"
+                       HorizontalTextAlignment="Center" />
+                <Label Grid.Column="2" Text="DIA" Style="{StaticResource CaptionLabel}"
+                       HorizontalTextAlignment="Center" />
+                <Label Grid.Column="3" Text="TAG" Style="{StaticResource CaptionLabel}" />
+            </Grid>
+        </Border>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Readings}" SelectionMode="None">
+            <CollectionView.EmptyView>
+                <Label Text="No measurements yet."
+                       TextColor="{StaticResource TextMuted}"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border StrokeShape="RoundRectangle 10" Padding="8,9" Margin="0,2">
+                        <Grid ColumnDefinitions="*,55,55,*" ColumnSpacing="6">
+                            <Label Grid.Column="0"
+                                   Text="{Binding MeasuredAt, StringFormat='{}{0:ddd d MMM, HH:mm}'}"
+                                   LineBreakMode="TailTruncation" />
+                            <Label Grid.Column="1" Text="{Binding Systolic.MmHg}"
+                                   FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                            <Label Grid.Column="2" Text="{Binding Diastolic.MmHg}"
+                                   FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                            <Label Grid.Column="3" Text="{Binding Context.Tag}"
+                                   TextColor="{StaticResource Tagged}"
+                                   LineBreakMode="TailTruncation" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

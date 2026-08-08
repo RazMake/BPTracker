@@ -41,6 +41,7 @@ public static class MauiProgram
         builder.Services.AddTransient<StorageLocationViewModel>();
         builder.Services.AddTransient<EntryPage>();
         builder.Services.AddTransient<ChartPage>();
+        builder.Services.AddTransient<HistoryPage>();
         builder.Services.AddTransient<SettingsPage>();
 
 #if DEBUG

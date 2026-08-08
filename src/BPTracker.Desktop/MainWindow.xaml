@@ -180,9 +180,12 @@
             </Border>
 
             <Border Grid.Row="2" Style="{StaticResource Card}">
-                <DataGrid ItemsSource="{Binding History.Readings}"
+                <DataGrid x:Name="HistoryGrid"
+                          ItemsSource="{Binding History.Readings}"
                           AutoGenerateColumns="False"
                           IsReadOnly="True"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
                           HeadersVisibility="Column"
                           GridLinesVisibility="Horizontal"
                           BorderThickness="0"

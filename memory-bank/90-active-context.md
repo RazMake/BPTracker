@@ -8,11 +8,14 @@ Both apps are built, green, and share one core. Quality gates, CI and release au
 place and verified.
 
 - 4 shared libraries + WPF desktop + MAUI Android head, building with **zero warnings**.
-- **354 tests**, line coverage **98.4%** against a required floor of 85%.
-- `dev.ps1` runs every gate locally; VS Code tasks and a debug profile are wired up.
+- **356 tests**, line coverage **98.4%** against a required floor of 85%.
+- `dev.ps1 setup` provisions the pinned .NET SDK, MAUI Android workload, JDK, Android SDK,
+  emulator image, local tools and NuGet packages; all other tasks use that SDK directly.
 - CI builds both apps and publishes on every push to `main`, scoped by changed paths.
 - Both apps are dark only and share one palette and one chart style. See
   [ADR-0003](decisions/ADR-0003-phone-chart.md) and [ADR-0004](decisions/ADR-0004-chart-shading.md).
+- The desktop chart uses proportional timestamp positions and gives tagged readings a gold marker;
+  the phone uses the same proportional scale at 30 pixels per day and has a newest-first table.
 
 ## Verified, not assumed
 
@@ -70,7 +73,7 @@ The Android build needs a JDK and the Android SDK. On this machine they are at:
 - JDK: `%LOCALAPPDATA%\Programs\Microsoft\jdk-17.0.20+8`
 - SDK: `%LOCALAPPDATA%\Android\Sdk`
 
-`dev.ps1` finds the JDK automatically; `./dev.ps1 setup` reports what is missing.
+`dev.ps1` finds the JDK automatically; `./dev.ps1 setup` installs missing dependencies.
 
 ## Watch out for
 

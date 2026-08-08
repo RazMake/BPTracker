@@ -102,7 +102,7 @@ public sealed class ChartViewModelTests
     [Fact]
     public async Task DraggingRightGoesBackInTime()
     {
-        var viewModel = await LoadedViewModel(5);
+        var viewModel = await LoadedViewModel(30);
         var start = viewModel.Offset;
 
         viewModel.BeginScroll();
@@ -114,7 +114,7 @@ public sealed class ChartViewModelTests
     [Fact]
     public async Task ScrollingIsMeasuredFromWhereTheGestureStarted()
     {
-        var viewModel = await LoadedViewModel(5);
+        var viewModel = await LoadedViewModel(30);
         var start = viewModel.Offset;
 
         viewModel.BeginScroll();
@@ -165,6 +165,15 @@ public sealed class ChartViewModelTests
         var viewModel = await LoadedViewModel(30, width: 100);
 
         viewModel.CanScroll.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task CompressedPhoneZoomFitsTenDailyMeasurementsAcross300Pixels()
+    {
+        var viewModel = await LoadedViewModel(10, width: 300);
+
+        viewModel.PixelsPerHour.ShouldBe(1.25d, Tolerance);
+        viewModel.CanScroll.ShouldBeFalse();
     }
 
     [Fact]

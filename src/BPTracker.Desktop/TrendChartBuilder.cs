@@ -1,9 +1,12 @@
 using System.Globalization;
+using BPTracker.Application.Trends;
 using BPTracker.Domain.Readings;
 using BPTracker.Presentation.Charts;
 using BPTracker.Presentation.Trends;
 using LiveChartsCore;
+using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
@@ -29,6 +32,7 @@ internal static class TrendChartBuilder
     private static readonly SKColor SurfaceColour = new(0x18, 0x1F, 0x27);
     private static readonly SKColor InkColour = new(0xE9, 0xEE, 0xF3);
     private static readonly SKColor CrosshairColour = new(0xD5, 0xDB, 0xE1, 0xA0);
+    private static readonly SKColor SelectionColour = new(0xE9, 0xEE, 0xF3);
     private static readonly SKColor NormalBandColour = new(0x3F, 0xBF, 0x77, 0x1A);
     private static readonly SKColor NormalBandLabelColour = new(0x3F, 0xBF, 0x77, 0x7A);
 
@@ -40,42 +44,49 @@ internal static class TrendChartBuilder
         chart.TooltipBackgroundPaint = new SolidColorPaint(SurfaceColour);
         chart.TooltipTextPaint = new SolidColorPaint(InkColour);
         chart.TooltipTextSize = 12;
-        chart.FindingStrategy = FindingStrategy.CompareOnlyX;
+        // CompareOnlyX (without TakeClosest) returns every point whose hover area overlaps the
+        // pointer, ignoring distance. With many readings in view that is nearly the whole series,
+        // so the tooltip listed dozens of systolic/diastolic values at once. TakeClosest narrows
+        // each series down to the one nearest point, which is what a hover tooltip should show.
+        chart.FindingStrategy = FindingStrategy.CompareOnlyXTakeClosest;
         chart.LegendBackgroundPaint = new SolidColorPaint(SurfaceColour);
         chart.LegendTextPaint = new SolidColorPaint(MutedColour);
         chart.LegendTextSize = 12;
     }
 
-    internal static ISeries[] BuildSeries(TrendViewModel trend)
+    internal static ISeries[] BuildSeries(TrendViewModel trend, BloodPressureReading? highlighted = null)
     {
-        var systolic = trend.ChartSamples.Select(point => point.Systolic).ToArray();
-        var diastolic = trend.ChartSamples.Select(point => point.Diastolic).ToArray();
+        var samples = trend.ChartSamples.ToArray();
 
         return
         [
             Line(
                 "Systolic",
-                systolic,
-                SystolicColour,
-                4,
-                index => trend.ChartSamples[index].TimeText,
-                index => trend.ChartSamples[index].SystolicText),
+                samples,
+                point => point.Systolic,
+                new LineAppearance(
+                    SystolicColour,
+                    4,
+                    index => samples[index].TimeText,
+                    index => samples[index].SystolicText)),
             Line(
                 "Diastolic",
-                diastolic,
-                DiastolicColour,
-                4,
-                index => trend.ChartSamples[index].TimeText,
-                index => trend.ChartSamples[index].DiastolicText),
+                samples,
+                point => point.Diastolic,
+                new LineAppearance(
+                    DiastolicColour,
+                    4,
+                    index => samples[index].TimeText,
+                    index => samples[index].DiastolicText)),
             Line(
                 "Systolic trend",
-                [.. trend.ChartSamples.Select(point => point.SmoothedSystolic)],
-                SmoothedColour,
-                0,
-                isHoverable: false),
-            CrisisOverlay("Systolic crisis", systolic, CrisisThreshold.Systolic),
-            CrisisOverlay("Diastolic crisis", diastolic, CrisisThreshold.Diastolic),
-            TagMarkers(trend),
+                samples,
+                point => point.SmoothedSystolic,
+                new LineAppearance(SmoothedColour, 0, null, null, false)),
+            .. CrisisOverlays("Systolic crisis", samples, point => point.Systolic, CrisisThreshold.Systolic),
+            .. CrisisOverlays("Diastolic crisis", samples, point => point.Diastolic, CrisisThreshold.Diastolic),
+            TagMarkers(samples),
+            .. SelectionMarkers(highlighted),
         ];
     }
 
@@ -92,9 +103,20 @@ internal static class TrendChartBuilder
         ZIndex = 100,
     };
 
+    /// <summary>A brighter, persistent counterpart to the pointer guide, driven by a table click.</summary>
+    internal static RectangularSection BuildSelectionGuide() => new()
+    {
+        Xi = 0,
+        Xj = 0,
+        Stroke = new SolidColorPaint(SelectionColour) { StrokeThickness = 1.5f },
+        IsVisible = false,
+        ZIndex = 90,
+    };
+
     internal static RectangularSection[] BuildSections(
         ChartValueBounds bounds,
-        RectangularSection pointerGuide) =>
+        RectangularSection pointerGuide,
+        RectangularSection selectionGuide) =>
     [
         .. PressureBands.For(bounds.Lowest, bounds.Highest).Select(band => new RectangularSection
         {
@@ -105,18 +127,18 @@ internal static class TrendChartBuilder
             LabelPaint = new SolidColorPaint(NormalBandLabelColour),
             LabelSize = 11,
         }),
+        selectionGuide,
         pointerGuide,
     ];
 
-    internal static Axis[] BuildXAxes(TrendViewModel trend) =>
+    internal static ICartesianAxis[] BuildXAxes(TrendViewModel trend) =>
     [
-        new Axis
+        new XamlDateTimeAxis
         {
-            Labels = [.. trend.ChartSamples.Select(point =>
-                point.MeasuredAt.ToString("dd MMM HH:mm", CultureInfo.CurrentCulture))],
-            LabelsRotation = 45,
+            Interval = LabelInterval(trend.Period),
+            DateFormatter = date => date.ToString("d MMM", CultureInfo.CurrentCulture),
             LabelsPaint = new SolidColorPaint(MutedColour),
-            TextSize = 11,
+            TextSize = 10,
         },
     ];
 
@@ -134,36 +156,61 @@ internal static class TrendChartBuilder
         },
     ];
 
-    private static LineSeries<double> Line(
+    private static LineSeries<DateTimePoint> Line(
         string name,
-        double[] values,
-        SKColor colour,
-        float pointSize,
-        Func<int, string>? xTooltip = null,
-        Func<int, string>? yTooltip = null,
-        bool isHoverable = true) =>
+        IReadOnlyList<TrendChartSample> samples,
+        Func<TrendChartSample, double> value,
+        LineAppearance appearance) =>
+        new()
+        {
+            Name = name,
+            Values = [.. samples.Select(point => DateTimePointFor(point.MeasuredAt, value(point)))],
+            Stroke = new SolidColorPaint(appearance.Colour) { StrokeThickness = 2.5f },
+            GeometryStroke = new SolidColorPaint(appearance.Colour) { StrokeThickness = 2.5f },
+            GeometryFill = new SolidColorPaint(SurfaceColour),
+            GeometrySize = appearance.PointSize,
+            Fill = null,
+            LineSmoothness = 0,
+            XToolTipLabelFormatter = appearance.XTooltip is null ? null : point => appearance.XTooltip(point.Index),
+            YToolTipLabelFormatter = appearance.YTooltip is null ? null : point => appearance.YTooltip(point.Index),
+            IsHoverable = appearance.IsHoverable,
+        };
+
+    // Separate runs keep a crisis line from joining across a non-critical measurement.
+    private static IEnumerable<LineSeries<DateTimePoint>> CrisisOverlays(
+        string name,
+        IReadOnlyList<TrendChartSample> samples,
+        Func<TrendChartSample, double> value,
+        int threshold)
+    {
+        var run = new List<DateTimePoint>();
+
+        foreach (var sample in samples)
+        {
+            if (value(sample) >= threshold)
+            {
+                run.Add(DateTimePointFor(sample.MeasuredAt, value(sample)));
+                continue;
+            }
+
+            if (run.Count > 0)
+            {
+                yield return CrisisOverlay(name, run);
+                run = [];
+            }
+        }
+
+        if (run.Count > 0)
+        {
+            yield return CrisisOverlay(name, run);
+        }
+    }
+
+    private static LineSeries<DateTimePoint> CrisisOverlay(string name, IReadOnlyList<DateTimePoint> values) =>
         new()
         {
             Name = name,
             Values = values,
-            Stroke = new SolidColorPaint(colour) { StrokeThickness = 2.5f },
-            GeometryStroke = new SolidColorPaint(colour) { StrokeThickness = 2.5f },
-            GeometryFill = new SolidColorPaint(SurfaceColour),
-            GeometrySize = pointSize,
-            Fill = null,
-            LineSmoothness = 0,
-            XToolTipLabelFormatter = xTooltip is null ? null : point => xTooltip(point.Index),
-            YToolTipLabelFormatter = yTooltip is null ? null : point => yTooltip(point.Index),
-            IsHoverable = isHoverable,
-        };
-
-    // LiveCharts paints a series in one colour, so the crisis stretch is a second series laid over
-    // the first with everything below the threshold left null, which draws as a gap.
-    private static LineSeries<double?> CrisisOverlay(string name, double[] values, int threshold) =>
-        new()
-        {
-            Name = name,
-            Values = [.. values.Select(value => value >= threshold ? value : (double?)null)],
             Stroke = new SolidColorPaint(CrisisColour) { StrokeThickness = 3 },
             GeometryStroke = new SolidColorPaint(CrisisColour) { StrokeThickness = 3 },
             GeometryFill = new SolidColorPaint(CrisisColour),
@@ -174,18 +221,73 @@ internal static class TrendChartBuilder
             IsHoverable = false,
         };
 
-    private static ScatterSeries<TagPoint> TagMarkers(TrendViewModel trend) =>
+    private static LineSeries<TagPoint> TagMarkers(IReadOnlyList<TrendChartSample> samples) =>
         new()
         {
             Name = "Tag",
-            Values = [.. trend.ChartSamples
-                .Select((point, index) => new TagPoint(index, point.Systolic, point.Tag))
-                .Where(point => point.Tag is not null)],
-            Mapping = (point, index) => new(point.X, point.Y),
-            Fill = new SolidColorPaint(TaggedColour),
-            GeometrySize = 14,
+            Values = [.. samples
+                .Where(point => !string.IsNullOrWhiteSpace(point.Tag))
+                .Select(point => new TagPoint(point.MeasuredAt, point.Systolic, point.Tag!))],
+            Mapping = (point, index) => new(point.MeasuredAt.LocalDateTime.Ticks, point.Value),
+            Stroke = null,
+            GeometryStroke = new SolidColorPaint(SurfaceColour) { StrokeThickness = 2 },
+            GeometryFill = new SolidColorPaint(TaggedColour),
+            GeometrySize = 16,
+            Fill = null,
+            LineSmoothness = 0,
             YToolTipLabelFormatter = point => point.Model?.Tag ?? string.Empty,
         };
 
-    private sealed record TagPoint(double X, double Y, string? Tag);
+    // Rings drawn around the systolic and diastolic points of whichever reading the user clicked
+    // in the history table. Empty when nothing is selected, or when the selected reading falls
+    // outside the chart's current period.
+    private static IEnumerable<LineSeries<DateTimePoint>> SelectionMarkers(BloodPressureReading? highlighted)
+    {
+        if (highlighted is null)
+        {
+            yield break;
+        }
+
+        yield return SelectionMarker("Selected systolic", highlighted.MeasuredAt, highlighted.Systolic.MmHg);
+        yield return SelectionMarker("Selected diastolic", highlighted.MeasuredAt, highlighted.Diastolic.MmHg);
+    }
+
+    private static LineSeries<DateTimePoint> SelectionMarker(string name, DateTimeOffset measuredAt, double value) =>
+        new()
+        {
+            Name = name,
+            Values = [DateTimePointFor(measuredAt, value)],
+            Stroke = null,
+            GeometryStroke = new SolidColorPaint(SelectionColour) { StrokeThickness = 3 },
+            GeometryFill = new SolidColorPaint(SKColors.Transparent),
+            GeometrySize = 22,
+            Fill = null,
+            IsVisibleAtLegend = false,
+            IsHoverable = false,
+        };
+
+    private static DateTimePoint DateTimePointFor(DateTimeOffset measuredAt, double value) => new()
+    {
+        DateTime = measuredAt.LocalDateTime,
+        Value = value,
+    };
+
+    private static TimeSpan LabelInterval(TrendPeriod period) => period switch
+    {
+        TrendPeriod.Week => TimeSpan.FromDays(1),
+        TrendPeriod.Month => TimeSpan.FromDays(3),
+        TrendPeriod.Quarter => TimeSpan.FromDays(7),
+        TrendPeriod.Year => TimeSpan.FromDays(14),
+        TrendPeriod.All => TimeSpan.FromDays(30),
+        _ => TimeSpan.FromDays(7),
+    };
+
+    private sealed record LineAppearance(
+        SKColor Colour,
+        float PointSize,
+        Func<int, string>? XTooltip,
+        Func<int, string>? YTooltip,
+        bool IsHoverable = true);
+
+    private sealed record TagPoint(DateTimeOffset MeasuredAt, double Value, string Tag);
 }

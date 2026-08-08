@@ -8,7 +8,7 @@ Personal blood pressure tracker. Two clients, one shared .NET 10 core.
 ## Quick start
 
 ```powershell
-./dev.ps1 setup      # restore tools and packages
+./dev.ps1 setup      # install the SDK, Android toolchain, emulator and packages
 ./dev.ps1 gates      # build, test, and the 85% coverage gate
 ./dev.ps1 desktop    # run the WPF app
 ./dev.ps1 android    # run the phone app on an emulator (boots one if needed)

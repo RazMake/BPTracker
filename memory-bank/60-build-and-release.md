@@ -3,7 +3,7 @@
 ## Local
 
 ```powershell
-./dev.ps1 setup      # restore tools + packages, report Android toolchain status
+./dev.ps1 setup      # install every local dependency, then restore tools + packages
 ./dev.ps1 build      # build with warnings as errors
 ./dev.ps1 test       # run tests
 ./dev.ps1 coverage   # tests + HTML report + 85% gate, opens the report
@@ -25,24 +25,17 @@ change that breaks the phone app fails on the pull request rather than at releas
 
 ## Local Android toolchain
 
-Building the phone app needs three things beyond the .NET SDK:
-
-1. `dotnet workload install maui-android` (needs an elevated shell).
-2. A JDK 17. `dev.ps1` looks for one under `%LOCALAPPDATA%\Programs\Microsoft\jdk-*`.
-3. The Android SDK, provisioned with:
-   `dotnet build src/BPTracker.Mobile/BPTracker.Mobile.csproj -t:InstallAndroidDependencies -f net10.0-android -p:AcceptAndroidSDKLicenses=True`
-
-To run the phone app without a phone, add the emulator and a system image:
-
-```
-%LOCALAPPDATA%\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat --install emulator "system-images;android-36;google_apis;x86_64"
-```
+`./dev.ps1 setup` provisions the complete toolchain, not just a status report. If the machine
+lacks the SDK selected by `global.json`, it is installed under `%LOCALAPPDATA%\BPTracker\dotnet`
+so administrator permissions and a machine-wide package manager are unnecessary. The script then
+restores the workloads the solution requires (including `maui-android`), uses MAUI's
+`InstallAndroidDependencies` target to install a JDK and the Android SDK, accepts SDK licences,
+and installs `platform-tools`, the emulator and `system-images;android-36;google_apis;x86_64`.
+Finally it restores local .NET tools and NuGet packages. The steps are idempotent.
 
 Then `./dev.ps1 emulator` creates the `BPTracker_Pixel` AVD and boots it, and `./dev.ps1 android`
 deploys to it. `avdmanager` exits non-zero over a harmless cmdline-tools location warning, so the
 script checks the resulting AVD list rather than the exit code.
-
-`./dev.ps1 setup` reports which of these are missing.
 
 ## Release
 
