@@ -36,8 +36,24 @@ public sealed class GetTrendUseCaseTests
 
         var result = await CreateUseCase().ExecuteAsync(TrendPeriod.Week);
 
+        result.Readings.Count.ShouldBe(5);
         result.Daily.Count.ShouldBe(5);
         result.Smoothed.Count.ShouldBe(5);
+    }
+
+    [Fact]
+    public async Task ExecutePreservesExactReadingTimesOldestFirst()
+    {
+        GivenReadings(3);
+
+        var result = await CreateUseCase().ExecuteAsync(TrendPeriod.Week);
+
+        result.Readings.Select(reading => reading.MeasuredAt).ToArray().ShouldBe(
+        [
+            TestClock.DefaultNow.AddDays(-2),
+            TestClock.DefaultNow.AddDays(-1),
+            TestClock.DefaultNow,
+        ]);
     }
 
     [Fact]
@@ -61,6 +77,7 @@ public sealed class GetTrendUseCaseTests
 
         result.Summary.HasData.ShouldBeFalse();
         result.Summary.ShouldBe(TrendSummary.Empty);
+        result.Readings.ShouldBeEmpty();
         result.Daily.ShouldBeEmpty();
     }
 

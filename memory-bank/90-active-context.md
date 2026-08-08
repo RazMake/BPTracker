@@ -8,7 +8,7 @@ Both apps are built, green, and share one core. Quality gates, CI and release au
 place and verified.
 
 - 4 shared libraries + WPF desktop + MAUI Android head, building with **zero warnings**.
-- **329 tests**, line coverage **98.4%** against a required floor of 85%.
+- **354 tests**, line coverage **98.4%** against a required floor of 85%.
 - `dev.ps1` runs every gate locally; VS Code tasks and a debug profile are wired up.
 - CI builds both apps and publishes on every push to `main`, scoped by changed paths.
 - Both apps are dark only and share one palette and one chart style. See
@@ -31,6 +31,12 @@ place and verified.
   emulator through the accessibility tree.
 - The desktop renders dark end to end, with the same shaded corridors and line colours as the
   phone, and spells categories out as "Hypertension stage 1".
+- Both charts keep normal-range labels inside their shaded corridors and derive 10 mmHg axis
+  bounds from visible values, with 5 mmHg padding, so worsening readings remain visually distinct.
+- The desktop chart draws every exact reading. Hovering groups systolic and diastolic into one
+  date/time tooltip and includes the reading tag when present; a vertical guide follows the pointer
+  anywhere inside the plot, including gaps between measurements.
+- The desktop history table orders measurements newest first, independent of journal file order.
 - Both pages relayout on rotation: the entry screen goes from stacked to three columns.
 - Storage round-trips, merges journals from another device, and survives a truncated file.
 

@@ -10,7 +10,7 @@ public sealed class ChartAxisBuilderTests
 
     private static readonly DateTimeOffset Origin = TestClock.DefaultNow;
 
-    private static readonly int[] ExpectedGridValues = [40, 60, 80, 90, 100, 120, 140];
+    private static readonly int[] ExpectedGridValues = [40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140];
 
     private static readonly int[] ExpectedHealthyEdges =
     [

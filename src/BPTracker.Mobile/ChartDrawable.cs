@@ -74,14 +74,12 @@ internal sealed class ChartDrawable(ChartViewModel viewModel) : IDrawable
                 continue;
             }
 
-            // Sits just above the boundary it marks, and is anchored to the gutter rather than to
-            // the data, so it stays put while the chart scrolls.
             canvas.FontColor = NormalBandLabel;
             canvas.DrawString(
                 band.Label,
-                LeftGutter + 6, TopPadding + (float)band.Bottom - labelHeight - 3,
+                LeftGutter + 6, TopPadding + (float)band.Top + ((float)band.Height - labelHeight) / 2,
                 plotWidth - 12, labelHeight,
-                HorizontalAlignment.Left, VerticalAlignment.Top);
+                HorizontalAlignment.Left, VerticalAlignment.Center);
         }
     }
 

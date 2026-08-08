@@ -35,6 +35,8 @@ public sealed class TrendViewModelTests
 
         await viewModel.RefreshAsync(CancellationToken.None);
 
+        viewModel.Readings.Count.ShouldBe(6);
+        viewModel.ChartSamples.Count.ShouldBe(6);
         viewModel.Daily.Count.ShouldBe(6);
         viewModel.Smoothed.Count.ShouldBe(6);
         viewModel.HasData.ShouldBeTrue();
@@ -62,6 +64,8 @@ public sealed class TrendViewModelTests
         await viewModel.RefreshAsync(CancellationToken.None);
 
         viewModel.HasData.ShouldBeFalse();
+        viewModel.Readings.ShouldBeEmpty();
+        viewModel.ChartSamples.ShouldBeEmpty();
         viewModel.Daily.ShouldBeEmpty();
     }
 

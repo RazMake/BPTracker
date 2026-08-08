@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using BPTracker.Application.Trends;
+using BPTracker.Domain.Readings;
 using BPTracker.Domain.Trends;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -29,15 +30,21 @@ public sealed partial class TrendViewModel : ObservableObject
     /// <summary>Daily averages, oldest first.</summary>
     public ObservableCollection<TrendPoint> Daily { get; } = [];
 
+    /// <summary>Exact readings in the selected window, oldest first.</summary>
+    public ObservableCollection<BloodPressureReading> Readings { get; } = [];
+
     /// <summary>Moving average of <see cref="Daily"/>.</summary>
     public ObservableCollection<TrendPoint> Smoothed { get; } = [];
+
+    /// <summary>Exact, index-aligned values rendered by the desktop chart.</summary>
+    public ObservableCollection<TrendChartSample> ChartSamples { get; } = [];
 
     /// <summary>The windows a user can pick between.</summary>
     public static IReadOnlyList<TrendPeriod> AvailablePeriods { get; } =
         [TrendPeriod.Week, TrendPeriod.Month, TrendPeriod.Quarter, TrendPeriod.Year, TrendPeriod.All];
 
     /// <summary>Whether the current window contains anything to draw.</summary>
-    public bool HasData => Daily.Count > 0;
+    public bool HasData => Readings.Count > 0;
 
     /// <summary>Reloads the series for the selected window.</summary>
     [RelayCommand]
@@ -50,8 +57,10 @@ public sealed partial class TrendViewModel : ObservableObject
                 .ExecuteAsync(Period, cancellationToken: cancellationToken)
                 .ConfigureAwait(true);
 
+            Replace(Readings, result.Readings);
             Replace(Daily, result.Daily);
             Replace(Smoothed, result.Smoothed);
+            Replace(ChartSamples, TrendChartSampleBuilder.Build(result.Readings, result.Smoothed));
             Summary = result.Summary;
             OnPropertyChanged(nameof(HasData));
         }
@@ -63,7 +72,7 @@ public sealed partial class TrendViewModel : ObservableObject
 
     partial void OnPeriodChanged(TrendPeriod value) => RefreshCommand.Execute(null);
 
-    private static void Replace(ObservableCollection<TrendPoint> target, IReadOnlyList<TrendPoint> source)
+    private static void Replace<T>(ObservableCollection<T> target, IReadOnlyList<T> source)
     {
         target.Clear();
         foreach (var point in source)

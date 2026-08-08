@@ -24,17 +24,19 @@ public sealed class GetReadingHistoryUseCaseTests
     }
 
     [Fact]
-    public async Task ExecuteReturnsWhatTheRepositoryProvides()
+    public async Task ExecuteSortsReadingsNewestFirst()
     {
-        var expected = ReadingFactory.CreateDailySeries(3);
+        var oldest = ReadingFactory.Create(measuredAt: TestClock.DefaultNow.AddDays(-2));
+        var middle = ReadingFactory.Create(measuredAt: TestClock.DefaultNow.AddDays(-1));
+        var newest = ReadingFactory.Create(measuredAt: TestClock.DefaultNow);
         _repository.GetRangeAsync(
             Arg.Any<DateTimeOffset>(),
             Arg.Any<DateTimeOffset>(),
-            Arg.Any<CancellationToken>()).Returns(expected);
+            Arg.Any<CancellationToken>()).Returns([oldest, newest, middle]);
 
         var readings = await CreateUseCase().ExecuteAsync(7);
 
-        readings.ShouldBe(expected);
+        readings.ShouldBe([newest, middle, oldest]);
     }
 
     [Theory]

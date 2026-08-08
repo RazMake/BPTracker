@@ -23,8 +23,10 @@ public sealed class GetReadingHistoryUseCase(IReadingRepository repository, IClo
         ArgumentOutOfRangeException.ThrowIfLessThan(days, 1);
 
         var to = _clock.LocalNow;
-        return await _repository
+        var readings = await _repository
             .GetRangeAsync(to.AddDays(-days), to, cancellationToken)
             .ConfigureAwait(false);
+
+        return [.. readings.OrderByDescending(reading => reading.MeasuredAt)];
     }
 }

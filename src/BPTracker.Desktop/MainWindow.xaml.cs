@@ -2,12 +2,15 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using BPTracker.Presentation;
+using LiveChartsCore.Drawing;
+using LiveChartsCore.SkiaSharpView;
 
 namespace BPTracker.Desktop;
 
 public partial class MainWindow : Window
 {
     private readonly DashboardViewModel _dashboard;
+    private readonly RectangularSection _pointerGuide = TrendChartBuilder.BuildPointerGuide();
 
     public MainWindow(DashboardViewModel dashboard)
     {
@@ -18,6 +21,8 @@ public partial class MainWindow : Window
         DataContext = _dashboard;
         _dashboard.Trend.PropertyChanged += OnTrendChanged;
         _dashboard.RefreshFailed += OnRefreshFailed;
+        TrendChart.MouseMove += OnTrendChartMouseMove;
+        TrendChart.MouseLeave += OnTrendChartMouseLeave;
 
         Loaded += OnLoaded;
         Closed += OnClosed;
@@ -40,6 +45,8 @@ public partial class MainWindow : Window
     {
         _dashboard.Trend.PropertyChanged -= OnTrendChanged;
         _dashboard.RefreshFailed -= OnRefreshFailed;
+        TrendChart.MouseMove -= OnTrendChartMouseMove;
+        TrendChart.MouseLeave -= OnTrendChartMouseLeave;
         _dashboard.Dispose();
     }
 
@@ -56,12 +63,37 @@ public partial class MainWindow : Window
 
     private void RedrawChart()
     {
+        var bounds = TrendChartBuilder.BuildBounds(_dashboard.Trend);
+
         TrendChartBuilder.ApplyTheme(TrendChart);
         TrendChart.Series = TrendChartBuilder.BuildSeries(_dashboard.Trend);
-        TrendChart.Sections = TrendChartBuilder.BuildSections();
+        TrendChart.Sections = TrendChartBuilder.BuildSections(bounds, _pointerGuide);
         TrendChart.XAxes = TrendChartBuilder.BuildXAxes(_dashboard.Trend);
-        TrendChart.YAxes = TrendChartBuilder.BuildYAxes();
+        TrendChart.YAxes = TrendChartBuilder.BuildYAxes(bounds);
     }
+
+    private void OnTrendChartMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        var pointer = e.GetPosition(TrendChart);
+        var plot = TrendChart.CoreChart;
+        var origin = plot.DrawMarginLocation;
+        var size = plot.DrawMarginSize;
+
+        if (pointer.X < origin.X || pointer.X > origin.X + size.Width ||
+            pointer.Y < origin.Y || pointer.Y > origin.Y + size.Height)
+        {
+            _pointerGuide.IsVisible = false;
+            return;
+        }
+
+        var data = TrendChart.ScalePixelsToData(new LvcPointD(pointer.X, pointer.Y), 0, 0);
+        _pointerGuide.Xi = data.X;
+        _pointerGuide.Xj = data.X;
+        _pointerGuide.IsVisible = true;
+    }
+
+    private void OnTrendChartMouseLeave(object sender, System.Windows.Input.MouseEventArgs e) =>
+        _pointerGuide.IsVisible = false;
 
     private async void OnCheckForUpdates(object sender, RoutedEventArgs e)
     {

@@ -1,4 +1,5 @@
 using BPTracker.Domain.Readings;
+using BPTracker.Presentation.Trends;
 
 namespace BPTracker.Presentation.Charts;
 
@@ -10,10 +11,10 @@ namespace BPTracker.Presentation.Charts;
 public readonly record struct ChartValueBounds(int Lowest, int Highest)
 {
     /// <summary>Axis values are snapped to this multiple so the grid lines land on round numbers.</summary>
-    public const int Step = 20;
+    public const int Step = 10;
 
     /// <summary>Breathing room in mmHg kept above and below the extremes before snapping.</summary>
-    private const int Padding = 10;
+    private const int Padding = 5;
 
     /// <summary>
     /// Bounds that cover every sample and both healthy bands, so the reader can always see where
@@ -33,10 +34,31 @@ public readonly record struct ChartValueBounds(int Lowest, int Highest)
             highest = Math.Max(highest, sample.Systolic);
         }
 
-        return new ChartValueBounds(FloorTo(lowest - Padding), CeilingTo(highest + Padding));
+        return Create(lowest, highest);
     }
 
-    private static int FloorTo(int value) => value / Step * Step;
+    /// <summary>Bounds that cover every daily average and both healthy bands.</summary>
+    /// <exception cref="ArgumentNullException"><paramref name="points"/> is <see langword="null"/>.</exception>
+    public static ChartValueBounds ForTrend(IReadOnlyList<TrendChartSample> points)
+    {
+        ArgumentNullException.ThrowIfNull(points);
 
-    private static int CeilingTo(int value) => (value + Step - 1) / Step * Step;
+        var lowest = (double)HealthyRange.Diastolic.Lowest;
+        var highest = (double)HealthyRange.Systolic.TooHigh;
+
+        foreach (var point in points)
+        {
+            lowest = Math.Min(lowest, point.Diastolic);
+            highest = Math.Max(highest, point.Systolic);
+        }
+
+        return Create(lowest, highest);
+    }
+
+    private static ChartValueBounds Create(double lowest, double highest) =>
+        new(FloorTo(lowest - Padding), CeilingTo(highest + Padding));
+
+    private static int FloorTo(double value) => (int)Math.Floor(value / Step) * Step;
+
+    private static int CeilingTo(double value) => (int)Math.Ceiling(value / Step) * Step;
 }

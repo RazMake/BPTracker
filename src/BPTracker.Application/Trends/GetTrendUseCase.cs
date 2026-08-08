@@ -35,10 +35,11 @@ public sealed class GetTrendUseCase(IReadingRepository repository, IClock clock)
             .GetRangeAsync(from, to, cancellationToken)
             .ConfigureAwait(false);
 
-        var daily = TrendCalculator.DailyAverages(readings);
+        var chronologicalReadings = readings.OrderBy(reading => reading.MeasuredAt).ToArray();
+        var daily = TrendCalculator.DailyAverages(chronologicalReadings);
         var smoothed = TrendCalculator.MovingAverage(daily, smoothingWindowDays);
 
-        return new TrendResult(daily, smoothed, Summarise(readings));
+        return new TrendResult(chronologicalReadings, daily, smoothed, Summarise(readings));
     }
 
     private static TrendSummary Summarise(IReadOnlyList<BloodPressureReading> readings)

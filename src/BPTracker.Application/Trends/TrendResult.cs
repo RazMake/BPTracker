@@ -1,3 +1,4 @@
+using BPTracker.Domain.Readings;
 using BPTracker.Domain.Trends;
 
 namespace BPTracker.Application.Trends;
@@ -23,10 +24,12 @@ public readonly record struct TrendSummary(
 }
 
 /// <summary>Everything the trend screen needs for one window.</summary>
+/// <param name="Readings">Exact readings, oldest first.</param>
 /// <param name="Daily">One point per day, oldest first.</param>
 /// <param name="Smoothed">The moving average of <paramref name="Daily"/>.</param>
 /// <param name="Summary">Headline statistics.</param>
 public sealed record TrendResult(
+    IReadOnlyList<BloodPressureReading> Readings,
     IReadOnlyList<TrendPoint> Daily,
     IReadOnlyList<TrendPoint> Smoothed,
     TrendSummary Summary);
