@@ -11,13 +11,14 @@
     <Grid RowDefinitions="Auto, *" Padding="12,8"
           BackgroundColor="{StaticResource Background}">
         <Border Grid.Row="0" StrokeShape="RoundRectangle 10" Padding="8,7" Margin="0,0,0,6">
-            <Grid ColumnDefinitions="*,55,55,*" ColumnSpacing="6">
+                 <Grid ColumnDefinitions="*,55,55,16" ColumnSpacing="6">
                 <Label Grid.Column="0" Text="WHEN" Style="{StaticResource CaptionLabel}" />
                 <Label Grid.Column="1" Text="SYS" Style="{StaticResource CaptionLabel}"
                        HorizontalTextAlignment="Center" />
                 <Label Grid.Column="2" Text="DIA" Style="{StaticResource CaptionLabel}"
                        HorizontalTextAlignment="Center" />
-                <Label Grid.Column="3" Text="TAG" Style="{StaticResource CaptionLabel}" />
+                  <BoxView Grid.Column="3" Color="{StaticResource Tagged}"
+                        CornerRadius="2" WidthRequest="8" />
             </Grid>
         </Border>
 
@@ -31,7 +32,18 @@
             <CollectionView.ItemTemplate>
                 <DataTemplate>
                     <Border StrokeShape="RoundRectangle 10" Padding="8,9" Margin="0,2">
-                        <Grid ColumnDefinitions="*,55,55,*" ColumnSpacing="6">
+                        <Grid ColumnDefinitions="*,55,55,16" ColumnSpacing="6">
+                            <Label x:Name="TagOverlay" Grid.ColumnSpan="4"
+                                   Text="{Binding Context.Tag}"
+                                   BackgroundColor="{StaticResource SurfacePressed}"
+                                   TextColor="{StaticResource Tagged}"
+                                   FontAttributes="Bold"
+                                   LineBreakMode="TailTruncation"
+                                   VerticalTextAlignment="Center"
+                                   Padding="6,0"
+                                   IsVisible="False"
+                                   InputTransparent="True"
+                                   ZIndex="2" />
                             <Label Grid.Column="0"
                                    Text="{Binding MeasuredAt, StringFormat='{}{0:ddd d MMM, HH:mm}'}"
                                    LineBreakMode="TailTruncation" />
@@ -39,9 +51,24 @@
                                    FontAttributes="Bold" HorizontalTextAlignment="Center" />
                             <Label Grid.Column="2" Text="{Binding Diastolic.MmHg}"
                                    FontAttributes="Bold" HorizontalTextAlignment="Center" />
-                            <Label Grid.Column="3" Text="{Binding Context.Tag}"
-                                   TextColor="{StaticResource Tagged}"
-                                   LineBreakMode="TailTruncation" />
+                            <Button Grid.Column="3"
+                                    BackgroundColor="{StaticResource Tagged}"
+                                    CornerRadius="2"
+                                    Padding="0"
+                                    MinimumWidthRequest="0"
+                                    MinimumHeightRequest="0"
+                                    CommandParameter="{x:Reference TagOverlay}"
+                                    Pressed="OnTagPressed"
+                                    Released="OnTagReleased"
+                                    SemanticProperties.Description="{Binding Context.Tag, StringFormat='Tag: {0}'}">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Binding="{Binding Context.Tag}"
+                                                 Value="{x:Null}">
+                                        <Setter Property="IsVisible" Value="False" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
                         </Grid>
                     </Border>
                 </DataTemplate>

@@ -28,8 +28,15 @@ public readonly record struct TrendSummary(
 /// <param name="Daily">One point per day, oldest first.</param>
 /// <param name="Smoothed">The moving average of <paramref name="Daily"/>.</param>
 /// <param name="Summary">Headline statistics.</param>
+/// <param name="Window">The range the readings were taken from.</param>
+/// <param name="EarliestMeasuredAt">
+/// When the oldest reading on record was measured, or <see langword="null"/> when there are none.
+/// It is what tells the screen whether an older page exists.
+/// </param>
 public sealed record TrendResult(
     IReadOnlyList<BloodPressureReading> Readings,
     IReadOnlyList<TrendPoint> Daily,
     IReadOnlyList<TrendPoint> Smoothed,
-    TrendSummary Summary);
+    TrendSummary Summary,
+    TrendWindow Window,
+    DateTimeOffset? EarliestMeasuredAt);

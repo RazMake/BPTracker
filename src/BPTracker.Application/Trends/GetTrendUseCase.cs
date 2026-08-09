@@ -16,30 +16,38 @@ public sealed class GetTrendUseCase(IReadingRepository repository, IClock clock)
         ?? throw new ArgumentNullException(nameof(clock));
 
     /// <summary>
-    /// Returns the daily averages and their moving average for the trailing window.
+    /// Returns the daily averages and their moving average for one page of the chosen period.
     /// </summary>
-    /// <param name="period">How far back to look.</param>
-    /// <param name="smoothingWindowDays">Width of the moving average, in days.</param>
+    /// <param name="request">Which page of which period to load.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<TrendResult> ExecuteAsync(
-        TrendPeriod period,
-        int smoothingWindowDays = 7,
+        TrendRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(smoothingWindowDays, 1);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentOutOfRangeException.ThrowIfLessThan(request.SmoothingWindowDays, 1);
 
-        var to = _clock.LocalNow;
-        var from = period.StartOf(to);
+        var window = request.Period.Page(_clock.LocalNow, request.PageIndex);
 
         var readings = await _repository
-            .GetRangeAsync(from, to, cancellationToken)
+            .GetRangeAsync(window.From, window.To, cancellationToken)
+            .ConfigureAwait(false);
+
+        var earliest = await _repository
+            .GetEarliestMeasuredAtAsync(cancellationToken)
             .ConfigureAwait(false);
 
         var chronologicalReadings = readings.OrderBy(reading => reading.MeasuredAt).ToArray();
         var daily = TrendCalculator.DailyAverages(chronologicalReadings);
-        var smoothed = TrendCalculator.MovingAverage(daily, smoothingWindowDays);
+        var smoothed = TrendCalculator.MovingAverage(daily, request.SmoothingWindowDays);
 
-        return new TrendResult(chronologicalReadings, daily, smoothed, Summarise(readings));
+        return new TrendResult(
+            chronologicalReadings,
+            daily,
+            smoothed,
+            Summarise(readings),
+            window,
+            earliest);
     }
 
     private static TrendSummary Summarise(IReadOnlyList<BloodPressureReading> readings)

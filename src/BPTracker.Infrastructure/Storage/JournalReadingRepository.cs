@@ -87,6 +87,17 @@ public sealed class JournalReadingRepository : IReadingRepository, IDisposable
     }
 
     /// <inheritdoc />
+    public async Task<DateTimeOffset?> GetEarliestMeasuredAtAsync(CancellationToken cancellationToken = default)
+    {
+        var all = await SnapshotAsync(cancellationToken).ConfigureAwait(false);
+
+        return all.Values
+            .Where(reading => !reading.IsDeleted)
+            .Select(reading => (DateTimeOffset?)reading.MeasuredAt)
+            .Min();
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<BloodPressureReading>> GetAllIncludingRetractedAsync(
         CancellationToken cancellationToken = default)
     {

@@ -22,6 +22,13 @@ public interface IReadingRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns when the oldest non-retracted reading was measured, or <see langword="null"/> when
+    /// nothing is stored. The trend screen pages through history, so it needs to know where
+    /// history ends without loading it.
+    /// </summary>
+    Task<DateTimeOffset?> GetEarliestMeasuredAtAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns every stored reading including retracted tombstones. Used by sync, not by the UI.
     /// </summary>
     Task<IReadOnlyList<BloodPressureReading>> GetAllIncludingRetractedAsync(

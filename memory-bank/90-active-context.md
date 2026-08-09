@@ -8,7 +8,7 @@ Both apps are built, green, and share one core. Quality gates, CI and release au
 place and verified.
 
 - 4 shared libraries + WPF desktop + MAUI Android head, building with **zero warnings**.
-- **404 tests**, line coverage **97.8%** against a required floor of 85%.
+- **433 tests**, line coverage **98%** against a required floor of 85%.
 - The journal line is `Date, Time, Sys, Dia, Tag` plus `Id`, `UpdatedAt`, `Deleted`. See
   [ADR-0005](decisions/ADR-0005-journal-line-shape.md).
 - Both apps export the same three things - CSV, a PNG of the chart, a PNG of the readings table -
@@ -20,7 +20,15 @@ place and verified.
 - Both apps are dark only and share one palette and one chart style. See
   [ADR-0003](decisions/ADR-0003-phone-chart.md) and [ADR-0004](decisions/ADR-0004-chart-shading.md).
 - The desktop chart uses proportional timestamp positions and gives tagged readings a gold marker;
-  the phone uses the same proportional scale at 30 pixels per day and has a newest-first table.
+  the phone uses the same proportional scale at 30 pixels per day and has a newest-first table whose
+  narrow amber tag cells reveal their tag across the row while held.
+- The desktop chart keeps a fixed 30 day viewport at every period, so the gap between two readings
+  never depends on how much history is loaded. Wider windows are scrolled, not squeezed:
+  `TrendViewport` in `BPTracker.Presentation` does the maths, a `ScrollBar` and the mouse wheel
+  drive it, and `XamlDateTimeAxis.MinLimit`/`MaxLimit` move in place so nothing re-animates.
+- A year is the longest trend period. `TrendPeriod.All` is gone; older history is reached with the
+  paging arrows, which step one whole window back and stop where `GetEarliestMeasuredAtAsync` says
+  the record starts.
 
 ## Verified, not assumed
 
@@ -52,7 +60,14 @@ place and verified.
   focus, which hid the light cell text. The selection is also cleared outright once keyboard focus
   leaves the grid, which clears the chart highlight with it.
 - The desktop history table orders measurements newest first, independent of journal file order.
+- With 14 months seeded, the desktop chart draws the same 30 day slice on Month and on Year, shows
+  its scrollbar only when the window is wider than the slice, and the older arrow moves the label
+  from "8 Aug 2025 - 8 Aug 2026" to "8 Aug 2024 - 8 Aug 2025" and then disables itself.
+- The stock WPF button template paints its own near-white background when disabled, whatever
+  `Background` is set to, so the paging arrows use the `NavButton` template instead.
 - Both pages relayout on rotation: the entry screen goes from stacked to three columns.
+- The phone history table shows tags as narrow amber swatches. Holding a swatch overlays the tag
+  across its row, and releasing it restores the reading; this was verified on the emulator.
 - Storage round-trips, merges journals from another device, and survives a truncated file.
 
 ## Open items

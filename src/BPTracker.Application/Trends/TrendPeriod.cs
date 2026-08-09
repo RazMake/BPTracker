@@ -3,35 +3,52 @@ namespace BPTracker.Application.Trends;
 /// <summary>
 /// A selectable window for the trend chart.
 /// </summary>
+/// <remarks>
+/// A year is deliberately the longest. The chart keeps a fixed number of days on screen, so older
+/// history is reached by paging rather than by squeezing more readings into the same width.
+/// </remarks>
 public enum TrendPeriod
 {
-    /// <summary>Trailing 7 days.</summary>
+    /// <summary>Seven days.</summary>
     Week,
 
-    /// <summary>Trailing 30 days.</summary>
+    /// <summary>Thirty days.</summary>
     Month,
 
-    /// <summary>Trailing 90 days.</summary>
+    /// <summary>Ninety days.</summary>
     Quarter,
 
-    /// <summary>Trailing 365 days.</summary>
+    /// <summary>Three hundred and sixty five days.</summary>
     Year,
-
-    /// <summary>Everything on record.</summary>
-    All,
 }
 
-/// <summary>Maps a <see cref="TrendPeriod"/> onto a concrete start instant.</summary>
+/// <summary>Maps a <see cref="TrendPeriod"/> onto the window one page of it covers.</summary>
 public static class TrendPeriodExtensions
 {
-    /// <summary>Returns the inclusive start of the window ending at <paramref name="endingAt"/>.</summary>
-    public static DateTimeOffset StartOf(this TrendPeriod period, DateTimeOffset endingAt) => period switch
+    /// <summary>How many days one page of the period covers.</summary>
+    public static int Days(this TrendPeriod period) => period switch
     {
-        TrendPeriod.Week => endingAt.AddDays(-7),
-        TrendPeriod.Month => endingAt.AddDays(-30),
-        TrendPeriod.Quarter => endingAt.AddDays(-90),
-        TrendPeriod.Year => endingAt.AddDays(-365),
-        TrendPeriod.All => DateTimeOffset.MinValue,
+        TrendPeriod.Week => 7,
+        TrendPeriod.Month => 30,
+        TrendPeriod.Quarter => 90,
+        TrendPeriod.Year => 365,
         _ => throw new ArgumentOutOfRangeException(nameof(period), period, "Unknown trend period."),
     };
+
+    /// <summary>
+    /// Returns the window one page covers. Page zero ends at <paramref name="endingAt"/> and each
+    /// further page steps one whole window further back.
+    /// </summary>
+    /// <param name="period">How much history one page covers.</param>
+    /// <param name="endingAt">The newest instant of page zero.</param>
+    /// <param name="pageIndex">Which page, counting back from zero.</param>
+    public static TrendWindow Page(this TrendPeriod period, DateTimeOffset endingAt, int pageIndex = 0)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(pageIndex);
+
+        var days = (double)period.Days();
+        var to = endingAt.AddDays(-days * pageIndex);
+
+        return new TrendWindow(to.AddDays(-days), to);
+    }
 }

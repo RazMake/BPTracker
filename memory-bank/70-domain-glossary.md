@@ -37,4 +37,4 @@ These labels are informational. They are never presented as diagnosis or advice.
 | --- | --- |
 | **Daily average** | All readings on one local calendar day, averaged into one point. |
 | **Moving average** | Trailing simple average over N daily points. Leading points average over fewer samples rather than being dropped, so the smoothed series stays aligned with the raw series on the x-axis. |
-| **Trend period** | The window: week (7d), month (30d), quarter (90d), year (365d), or all. |
+| **Trend period** | The window one page covers: week (7d), month (30d), quarter (90d) or year (365d). A year is the most the chart ever loads; older history is paged. |

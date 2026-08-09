@@ -22,6 +22,22 @@ public partial class HistoryPage : ContentPage
 
     private async void OnRefresh(object? sender, EventArgs e) => await RefreshAsync();
 
+    private static void OnTagPressed(object? sender, EventArgs e)
+    {
+        if (sender is Button { CommandParameter: Label overlay })
+        {
+            overlay.IsVisible = true;
+        }
+    }
+
+    private static void OnTagReleased(object? sender, EventArgs e)
+    {
+        if (sender is Button { CommandParameter: Label overlay })
+        {
+            overlay.IsVisible = false;
+        }
+    }
+
     private async Task RefreshAsync()
     {
         try

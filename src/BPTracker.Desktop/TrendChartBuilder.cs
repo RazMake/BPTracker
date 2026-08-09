@@ -1,12 +1,10 @@
 using System.Globalization;
-using BPTracker.Application.Trends;
 using BPTracker.Domain.Readings;
 using BPTracker.Presentation.Charts;
 using BPTracker.Presentation.Trends;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
-using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
@@ -131,16 +129,23 @@ internal static class TrendChartBuilder
         pointerGuide,
     ];
 
-    internal static ICartesianAxis[] BuildXAxes(TrendViewModel trend) =>
-    [
-        new XamlDateTimeAxis
-        {
-            Interval = LabelInterval(trend.Period),
-            DateFormatter = date => date.ToString("d MMM", CultureInfo.CurrentCulture),
-            LabelsPaint = new SolidColorPaint(MutedColour),
-            TextSize = 10,
-        },
-    ];
+    internal static XamlDateTimeAxis BuildTimeAxis() => new()
+    {
+        DateFormatter = date => date.ToString("d MMM", CultureInfo.CurrentCulture),
+        LabelsPaint = new SolidColorPaint(MutedColour),
+        TextSize = 10,
+    };
+
+    // Moves the visible slice of time in place. Reassigning the axis would replay every entrance
+    // animation, so scrolling has to touch nothing but these three properties.
+    internal static void ApplyViewport(XamlDateTimeAxis axis, TrendViewport viewport)
+    {
+        ArgumentNullException.ThrowIfNull(axis);
+
+        axis.Interval = TimeSpan.FromDays(viewport.LabelStepDays);
+        axis.MinLimit = viewport.From.LocalDateTime.Ticks;
+        axis.MaxLimit = viewport.To.LocalDateTime.Ticks;
+    }
 
     internal static Axis[] BuildYAxes(ChartValueBounds bounds) =>
     [
@@ -268,16 +273,6 @@ internal static class TrendChartBuilder
     {
         DateTime = measuredAt.LocalDateTime,
         Value = value,
-    };
-
-    private static TimeSpan LabelInterval(TrendPeriod period) => period switch
-    {
-        TrendPeriod.Week => TimeSpan.FromDays(1),
-        TrendPeriod.Month => TimeSpan.FromDays(3),
-        TrendPeriod.Quarter => TimeSpan.FromDays(7),
-        TrendPeriod.Year => TimeSpan.FromDays(14),
-        TrendPeriod.All => TimeSpan.FromDays(30),
-        _ => TimeSpan.FromDays(7),
     };
 
     private sealed record LineAppearance(

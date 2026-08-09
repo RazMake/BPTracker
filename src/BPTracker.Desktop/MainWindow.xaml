@@ -16,6 +16,7 @@
     <Window.Resources>
         <local:CategoryNameConverter x:Key="CategoryName" />
         <local:CriticalBrushConverter x:Key="CriticalBrush" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
     </Window.Resources>
 
     <Grid Margin="16">
@@ -179,10 +180,25 @@
             <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Period" VerticalAlignment="Center" Style="{StaticResource Caption}" />
-                    <ComboBox Margin="12,0,24,0"
+                    <ComboBox Margin="12,0,12,0"
                               Width="140"
                               ItemsSource="{x:Static trends:TrendViewModel.AvailablePeriods}"
                               SelectedItem="{Binding Trend.Period}" />
+
+                    <Button Content="&#x25C0;"
+                            Style="{StaticResource NavButton}"
+                            ToolTip="Older"
+                            Command="{Binding Trend.PageOlderCommand}" />
+                    <TextBlock Margin="10,0,10,0"
+                               MinWidth="180"
+                               VerticalAlignment="Center"
+                               TextAlignment="Center"
+                               Text="{Binding Trend.WindowLabel}" />
+                    <Button Content="&#x25B6;"
+                            Style="{StaticResource NavButton}"
+                            Margin="0,0,24,0"
+                            ToolTip="Newer"
+                            Command="{Binding Trend.PageNewerCommand}" />
 
                     <TextBlock Text="Average" VerticalAlignment="Center" Style="{StaticResource Caption}" />
                     <TextBlock Margin="8,0,4,0" VerticalAlignment="Center" FontWeight="SemiBold"
@@ -198,7 +214,27 @@
             </Border>
 
             <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,16">
-                <lvc:CartesianChart x:Name="TrendChart" Background="{StaticResource Surface}" />
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <lvc:CartesianChart Grid.Row="0" x:Name="TrendChart" Background="{StaticResource Surface}" />
+
+                    <ScrollBar Grid.Row="1"
+                               Orientation="Horizontal"
+                               Margin="0,8,0,0"
+                               Minimum="0"
+                               Maximum="{Binding Trend.Viewport.MaxOffsetDays, Mode=OneWay}"
+                               ViewportSize="{Binding Trend.Viewport.VisibleDays, Mode=OneWay}"
+                               Value="{Binding Trend.ScrollOffsetDays, Mode=TwoWay}"
+                               SmallChange="1"
+                               LargeChange="7"
+                               ToolTip="Scroll through the loaded window"
+                               Visibility="{Binding Trend.Viewport.CanScroll,
+                                                   Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
             </Border>
 
             <Border Grid.Row="2" Style="{StaticResource Card}">

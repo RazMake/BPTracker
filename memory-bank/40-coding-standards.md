@@ -30,7 +30,7 @@ These have already caught real problems in this codebase, so do not treat them a
 - **S** - one reason to change per type. The file-length gate is a proxy for this.
 - **O** - extend by adding a use case or an adapter, not by adding an `if` to an existing one.
 - **L** - implementations of a port must honour the port's documented contract, including nullability.
-- **I** - keep ports narrow. `IReadingRepository` exists because the ViewModels need those four
+- **I** - keep ports narrow. `IReadingRepository` exists because the ViewModels need those five
   operations, not because SQLite offers more.
 - **D** - Application defines the interface; Infrastructure implements it. Never the reverse.
 
