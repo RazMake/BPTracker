@@ -8,8 +8,8 @@
   <!-- Analyzers applied to every project in the repo. GlobalPackageReference
        implies PrivateAssets="All" so they never flow to consumers. -->
   <ItemGroup>
-    <GlobalPackageReference Include="SonarAnalyzer.CSharp" Version="10.31.0.145097" />
-    <GlobalPackageReference Include="Roslynator.Analyzers" Version="4.15.0" />
+    <GlobalPackageReference Include="SonarAnalyzer.CSharp" Version="10.32.0.713" />
+    <GlobalPackageReference Include="Roslynator.Analyzers" Version="4.16.0" />
   </ItemGroup>
 
   <ItemGroup Label="Shared runtime">
